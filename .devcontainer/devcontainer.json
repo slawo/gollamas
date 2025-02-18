@@ -1,0 +1,22 @@
+{
+	"name": "slawo-gollamas",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"EditorConfig.EditorConfig",
+				"golang.go"
+			]
+		}
+	},
+	"forwardPorts": [
+		11434
+	],
+	// Use 'otherPortsAttributes' to configure any ports that aren't configured using 'portsAttributes'.
+	"otherPortsAttributes": {
+		"onAutoForward": "notify"
+	},
+	"postCreateCommand": "go version"
+}
