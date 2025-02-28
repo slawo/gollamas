@@ -12,14 +12,39 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+var (
+	version   = "unknown"
+	buildID   = "unknown"
+	buildDate = "unknown"
+)
+
 func main() {
 	appName := filepath.Base(os.Args[0])
 
 	err := (&cli.Command{
 		Name:   appName,
 		Action: runGollamas,
+		Commands: []*cli.Command{
+			{
+				Name:    "version",
+				Aliases: []string{"v"},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name: "full",
+					},
+				},
+				Action: func(ctx context.Context, c *cli.Command) error {
+					if c.Bool("full") {
+						fmt.Println(version, ", id: ", buildID, ", date: ", buildDate)
+					} else {
+						fmt.Println(version)
+					}
+					return nil
+				},
+			},
+		},
+		Authors: []any{"Slawomir Caluch"},
 		Flags: []cli.Flag{
-
 			&cli.StringFlag{
 				Name:    "address",
 				Value:   "localhost:11434",
