@@ -1,0 +1,93 @@
+version: 2
+
+project_name: gollamas
+
+before:
+  hooks:
+  - go mod download
+
+builds:
+- binary: "gollamas"
+  no_unique_dist_dir: false
+  env:
+  - CGO_ENABLED=0
+  main: ./
+  flags:
+  - -trimpath
+  ldflags:
+  - -X=main.Version={{.Version}}
+  - -X=main.VersionDate={{.CommitDate}}
+  - -X=main.BuildDate={{.Date}}
+  - -X=main.GitCommit={{.FullCommit}}
+  goos:
+  - linux
+  - darwin
+  - windows
+  - freebsd
+  - openbsd
+  - solaris
+  goarch:
+  - 386
+  - amd64
+  - arm
+  - arm64
+  - mips64
+  - mips64le
+  - ppc64
+  - ppc64le
+  - riscv64
+  - s390x
+  goarm:
+  - 7
+  - 6
+  ignore:
+  - goos: darwin
+    goarch: 386
+  - goos: freebsd
+    goarch: arm
+  - goos: openbsd
+    goarch: arm
+  - goos: windows
+    goarch: 386
+  - goos: windows
+    goarch: arm
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '(?i)^chore:'
+    - '(?i)^Detach v[\d|.]+'
+    - '(?i)^Prepare release v[\d|.]+'
+
+release:
+  extra_files:
+  - glob: dist/*.sig
+  - glob: dist/*.pem
+
+universal_binaries:
+- replace: false
+
+checksum:
+  name_template: "checksums.txt"
+
+archives:
+- id: gollamas
+  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}'
+  formats: ['tar.gz']
+  format_overrides:
+  - goos: windows
+    formats: ['zip']
+  files:
+  - LICENSE
+  - CHANGELOG.md
+
+nfpms:
+- maintainer: Slawomir Caluch <scaluch@gmail.com>
+  description: go hello sample.
+  homepage: https://github.com/slawo/gollamas
+  license: MIT
+  formats:
+  - deb
+  - rpm
+  - apk

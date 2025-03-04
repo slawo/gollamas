@@ -1,0 +1,32 @@
+name: test
+
+on:
+  push:
+    branches:
+    - "!main"
+  pull_request:
+  workflow_call:
+
+jobs:
+  go:
+    strategy:
+      matrix:
+        go_version:
+        - "1.23"
+        os:
+        - ubuntu-latest
+        - windows-latest
+        - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go_version }}
+
+    - run: go build -o dist/
+    - run: go vet ./...
+    - run: go test ./... -cover
