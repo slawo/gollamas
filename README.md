@@ -3,12 +3,18 @@ A "reverse proxy" for multiple ollama servers running various models.
 
 This is a lowest effort implementation of a reverse proxy for ollama, it accepts all requests which relly on a model and runs the query on a server which has been specifically assigned to run the given model.
 
-## run 
+## run locally
 
 ````
 go run ./*.go --level=trace --address 0.0.0.0:11434 --proxy=llama3.2-vision=http://server-02:11434 
 --proxy=deepseek-r1:14b=http://server-01:11434
 ````
+
+## run on docker
+Official images are available on docker hub and ghcr.io. You can run the latest image from either: 
+
+  - [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas): `docker run -it slawoc/gollamas:latest`
+  - [ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas) : `docker run -it ghcr.io/slawo/gollamas:latest`
 
 # Features
 
