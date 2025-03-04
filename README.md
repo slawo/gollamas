@@ -13,8 +13,8 @@ go run ./*.go --level=trace --address 0.0.0.0:11434 --proxy=llama3.2-vision=http
 ## run on docker
 Official images are available on docker hub and ghcr.io. You can run the latest image from either: 
 
-  - [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas): `docker run -it slawoc/gollamas:latest`
-  - [ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas) : `docker run -it ghcr.io/slawo/gollamas:latest`
+  - [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas): `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" slawoc/gollamas:latest`
+  - [ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas) : `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" ghcr.io/slawo/gollamas:latest`
 
 # Features
 

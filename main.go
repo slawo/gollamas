@@ -21,10 +21,11 @@ func main() {
 		Action:  runGollamas,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "address",
+				Name:    "listen",
 				Value:   "localhost:11434",
 				Usage:   `address on which the router will be listening on, ie: "localhost:11434"`,
-				Aliases: []string{"a", "addr"},
+				Aliases: []string{"a", "addr", "address"},
+				Sources: cli.EnvVars("GOLLAMAS_LISTEN", "LISTEN"),
 			},
 			&cli.StringFlag{
 				Name:  "level",
@@ -41,10 +42,18 @@ func main() {
 					}, "|"),
 				),
 				Aliases: []string{"error-level"},
+				Sources: cli.EnvVars("GOLLAMAS_LEVEL", "LEVEL"),
 			},
 			&cli.StringSliceFlag{
 				Name:      "proxy",
-				Validator: validateService,
+				Usage:     `defines a proxy for a given model ex: --proxy 'llama3.2-vision=http://server:11434'`,
+				Validator: validateProxies,
+			},
+			&cli.StringFlag{
+				Name:      "proxies",
+				Validator: validateCSProxies,
+				Usage:     `defines a list of proxies per model given model ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
+				Sources:   cli.EnvVars("GOLLAMAS_PROXIES", "PROXIES"),
 			},
 		},
 		Commands: []*cli.Command{
@@ -93,7 +102,9 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	log.Tracef("starting")
 	defer log.Tracef("ending")
 
-	pConf, err := initProxyConfig(cli.StringSlice("proxy"))
+	p := append([]string{}, cli.StringSlice("proxy")...)
+	p = append(p, strings.Split(cli.String("proxies"), ",")...)
+	pConf, err := initProxyConfig(p)
 	if err != nil {
 		return err
 	}
@@ -110,7 +121,13 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	return http.ListenAndServe(addr, rs)
 }
 
-func validateService(s []string) error {
+func validateProxies(s []string) error {
+	_, err := initProxyConfig(s)
+	return err
+}
+
+func validateCSProxies(csl string) error {
+	s := strings.Split(csl, ",")
 	_, err := initProxyConfig(s)
 	return err
 }
