@@ -18,7 +18,7 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 
 # Features
 
-  - [ ] Preload models (ensure model is loaded upin startup)
+  - [ ] Preload models (ensure model is loaded uppon startup)
   - [ ] Ping models (maintain model loaded)
   - Fixed size context
     - [ ] Configure global context size
