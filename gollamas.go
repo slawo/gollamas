@@ -320,7 +320,9 @@ func (s *Service) ListHandler(c *gin.Context) {
 	}()
 	var res api.ListResponse
 	for lr := range ch {
-		res.Models = append(res.Models, lr.Models...)
+		if lr != nil && lr.Models != nil {
+			res.Models = append(res.Models, lr.Models...)
+		}
 	}
 	slices.SortStableFunc(res.Models, func(i, j api.ListModelResponse) int {
 		// most recently modified first
