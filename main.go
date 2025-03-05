@@ -115,7 +115,7 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	}
 
 	rs := s.GenerateRoutes()
-	addr := cli.String("address")
+	addr := cli.String("listen")
 
 	log.Printf("Starting server on %s", addr)
 	return http.ListenAndServe(addr, rs)
