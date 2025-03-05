@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/slawo/gollamas/compare/v0.2.0...v0.2.1) (2025-03-05)
+
+
+### Bug Fixes
+
+* fixes listen/address flag not being applied ([8de41bf](https://github.com/slawo/gollamas/commit/8de41bf8c6f4c7dca82f4f8c64c20d2d4c77bf43))
+* resolves a nil pointer crash ([ad95541](https://github.com/slawo/gollamas/commit/ad955414579d0982bad215b3ca50c08ce801e6c3))
+
 ## [0.2.0](https://github.com/slawo/gollamas/compare/v0.1.0...v0.2.0) (2025-03-04)
 
 
