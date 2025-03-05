@@ -1,7 +1,7 @@
 # gollamas
 A "reverse proxy" for multiple ollama servers running various models.
 
-This is a lowest effort implementation of a reverse proxy for ollama, it accepts all requests which relly on a model and runs the query on a server which has been specifically assigned to run the given model.
+This is a lowest effort implementation of a reverse proxy for ollama, it accepts chat and generation requests which relly on a model and runs the query on a server which has been specifically assigned to run the given model.
 
 ## run locally
 
@@ -38,6 +38,7 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 	- [V] `HEAD /api/version`
 	- [ ] `POST /api/blobs/:digest`
 	- [V] `POST /api/chat`
+	- [ ] `POST /api/copy`
 	- [ ] `POST /api/create`
 	- [V] `POST /api/embed`
 	- [V] `POST /api/embeddings`
@@ -45,7 +46,6 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 	- [V] `POST /api/pull`
 	- [V] `POST /api/show`
 	- [ ] `POST /api/push`
-	- [ ] `POST /api/copy`
 	- [V] `POST /v1/chat/completions`
 	- [V] `POST /v1/completions`
 	- [V] `POST /v1/embeddings`

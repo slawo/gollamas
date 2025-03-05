@@ -65,38 +65,41 @@ func (s *Service) GenerateRoutes() http.Handler {
 
 	// refer to https://github.com/ollama/ollama/blob/0667baddc658d3f556a369701819e7695477f59a/server/routes.go#L1146
 	// for the routes and setup in this file
-	r.POST("/api/pull", s.PullHandler)
-	r.POST("/api/generate", s.GenerateHandler)
+	r.DELETE("/api/delete", s.DeleteHandler)
+
+	r.GET("/", s.HomeHandler)
+	r.GET("/api/ps", s.PsHandler)
+	r.GET("/api/tags", s.ListHandler)
+	r.GET("/api/version", s.VersionHandler)
+	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
+	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
+
+	r.HEAD("/", s.HomeHandler)
+	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
+	r.HEAD("/v1/models", openai.ListMiddleware(), s.ListHandler)
+	r.HEAD("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
+
 	r.POST("/api/chat", s.ChatHandler)
+	r.POST("/api/copy", s.CopyHandler)
+	r.POST("/api/create", s.CreateHandler)
+	r.POST("/api/generate", s.GenerateHandler)
 	r.POST("/api/embed", s.EmbedHandler)
 	r.POST("/api/embeddings", s.EmbeddingsHandler)
-	r.POST("/api/create", s.CreateHandler)
+	r.POST("/api/pull", s.PullHandler)
 	r.POST("/api/push", s.PushHandler)
-	r.POST("/api/copy", s.CopyHandler)
-	r.DELETE("/api/delete", s.DeleteHandler)
 	r.POST("/api/show", s.ShowHandler)
 	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
-	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
-	r.GET("/api/ps", s.PsHandler)
 
 	// Compatibility endpoints
 	r.POST("/v1/chat/completions", openai.ChatMiddleware(), s.ChatHandler)
 	r.POST("/v1/completions", openai.CompletionsMiddleware(), s.GenerateHandler)
 	r.POST("/v1/embeddings", openai.EmbeddingsMiddleware(), s.EmbedHandler)
-	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
-	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
-
-	for _, method := range []string{http.MethodGet, http.MethodHead} {
-		r.Handle(method, "/", func(c *gin.Context) {
-			c.String(http.StatusOK, "Ollama is running")
-		})
-
-		r.Handle(method, "/api/tags", s.ListHandler)
-		r.Handle(method, "/api/version", s.VersionHandler)
-	}
 
 	return r
+}
 
+func (s *Service) HomeHandler(c *gin.Context) {
+	c.String(http.StatusOK, "Golamas is running")
 }
 
 func (s *Service) PullHandler(c *gin.Context) {
