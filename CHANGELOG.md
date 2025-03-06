@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/slawo/gollamas/compare/v0.2.1...v0.2.2) (2025-03-06)
+
+
+### Bug Fixes
+
+* tests failing on list running models ([2a651b4](https://github.com/slawo/gollamas/commit/2a651b415b84e0c5266bc6e2ce93e2a96a96362e))
+
 ## [0.2.1](https://github.com/slawo/gollamas/compare/v0.2.0...v0.2.1) (2025-03-05)
 
 
