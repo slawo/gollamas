@@ -135,6 +135,8 @@ jobs:
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
+      env:
+        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       with:
         images: |
           ${{ vars.DOCKERHUB_USERNAME }}/gollamas
@@ -177,6 +179,7 @@ jobs:
         platforms: linux/386,linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/riscv64,linux/s390x
         push: true
         tags: ${{ steps.meta.outputs.tags }}
+        annotations: ${{ steps.meta.outputs.annotations }}
         labels: ${{ steps.meta.outputs.labels }}
         buildargs: VERSION COMMIT_SHA RELEASE_DATE
         context: .
