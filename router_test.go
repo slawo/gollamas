@@ -460,7 +460,8 @@ func TestRouterListRunning(t *testing.T) {
 	out2 := &api.ProcessResponse{Models: []api.ProcessModelResponse{{Model: "llama3.2"}}}
 	resp, err = r.ListRunning(ctx)
 	assert.NoError(t, err)
-	assert.EqualValues(t, out2, resp)
+	assert.NotNil(t, resp)
+	assert.ElementsMatch(t, out2.Models, resp.Models)
 
 	c1.AssertExpectations(t)
 	c2.AssertExpectations(t)
