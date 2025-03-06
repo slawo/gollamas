@@ -30,29 +30,29 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
     - [ ] Add config to enforce context size per model/server `"options": { "num_ctx": 4096 }`
   - Proxy API
 	- [ ] `DELETE /api/delete`
-	- [V] `GET /`
-	- [V] `GET /api/tags`
-	- [V] `GET /api/ps`
-	- [V] `GET /api/version`
-	- [V] `GET /v1/models`
-	- [V] `GET /v1/models/:model`
-	- [V] `HEAD /`
+	- [x] `GET /`
+	- [x] `GET /api/tags`
+	- [x] `GET /api/ps`
+	- [x] `GET /api/version`
+	- [x] `GET /v1/models`
+	- [x] `GET /v1/models/:model`
+	- [x] `HEAD /`
 	- [ ] `HEAD /api/blobs/:digest`
-	- [V] `HEAD /api/tags`
-	- [V] `HEAD /api/version`
+	- [x] `HEAD /api/tags`
+	- [x] `HEAD /api/version`
 	- [ ] `POST /api/blobs/:digest`
-	- [V] `POST /api/chat`
+	- [x] `POST /api/chat`
 	- [ ] `POST /api/copy`
 	- [ ] `POST /api/create`
-	- [V] `POST /api/embed`
-	- [V] `POST /api/embeddings`
-	- [V] `POST /api/generate`
-	- [V] `POST /api/pull`
-	- [V] `POST /api/show`
+	- [x] `POST /api/embed`
+	- [x] `POST /api/embeddings`
+	- [x] `POST /api/generate`
+	- [x] `POST /api/pull`
+	- [x] `POST /api/show`
 	- [ ] `POST /api/push`
-	- [V] `POST /v1/chat/completions`
-	- [V] `POST /v1/completions`
-	- [V] `POST /v1/embeddings`
+	- [x] `POST /v1/chat/completions`
+	- [x] `POST /v1/completions`
+	- [x] `POST /v1/embeddings`
 
 ## Internals
 The server relies on existing ollama models and middlewares to speed up the development of the initial implementation.
