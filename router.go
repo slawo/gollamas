@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"sync"
 
@@ -15,6 +16,10 @@ import (
 	"github.com/ollama/ollama/types/model"
 	log "github.com/sirupsen/logrus"
 )
+
+type ProxyConfig struct {
+	Url string
+}
 
 // NewRouter creates a new router
 func NewRouter(ctx context.Context, cmap map[string]IOllamaClient) (*Router, error) {
@@ -244,4 +249,38 @@ func (r *Router) getClientByModel(ctx context.Context, m string) (IOllamaClient,
 		return nil, NewHttpError(http.StatusNotFound, "gollamas router is missing a valid route to model")
 	}
 	return cl, nil
+}
+
+func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
+	if ctx == nil {
+		return nil, errors.New("missing context")
+	}
+	if pc == nil {
+		return nil, errors.New("missing proxy config")
+	}
+	if len(pc) == 0 {
+		return nil, errors.New("empty proxy config map")
+	}
+	cmap := map[string]IOllamaClient{}
+	for k, v := range pc {
+		l := log.WithField("server", v.Url)
+		remote, err := url.Parse(v.Url)
+		if err != nil {
+			return nil, err
+		}
+		client := api.NewClient(remote, http.DefaultClient)
+
+		name := model.ParseName(k)
+		if !name.IsValid() {
+			return nil, fmt.Errorf("invalid model name: %s", k)
+		}
+		cmap[name.DisplayShortest()] = client
+
+		version, err := client.Version(ctx)
+		if err == nil {
+			l.WithField("version", version).Tracef("Connected to server.")
+		}
+	}
+
+	return cmap, nil
 }

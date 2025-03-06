@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
-	"net/url"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -16,13 +12,7 @@ import (
 	"github.com/ollama/ollama/api"
 	"github.com/ollama/ollama/envconfig"
 	"github.com/ollama/ollama/openai"
-	"github.com/ollama/ollama/types/model"
-	log "github.com/sirupsen/logrus"
 )
-
-type ProxyConfig struct {
-	Url string
-}
 
 func NewHttpError(code int, message string) *HttpError {
 	return &HttpError{
@@ -75,26 +65,6 @@ type IOllamaClient interface {
 	Embeddings(ctx context.Context, req *api.EmbeddingRequest) (*api.EmbeddingResponse, error)
 	CreateBlob(ctx context.Context, digest string, r io.Reader) error
 	Version(ctx context.Context) (string, error)
-}
-
-//go:generate mockery --name IGinService --output mocks
-type IGinService interface {
-	ChatHandler(c *gin.Context)
-	CopyHandler(c *gin.Context)
-	CreateBlobHandler(c *gin.Context)
-	CreateHandler(c *gin.Context)
-	DeleteHandler(c *gin.Context)
-	EmbeddingsHandler(c *gin.Context)
-	EmbedHandler(c *gin.Context)
-	GenerateHandler(c *gin.Context)
-	HeadBlobHandler(c *gin.Context)
-	HomeHandler(c *gin.Context)
-	ListHandler(c *gin.Context)
-	PsHandler(c *gin.Context)
-	PullHandler(c *gin.Context)
-	PushHandler(c *gin.Context)
-	ShowHandler(c *gin.Context)
-	VersionHandler(c *gin.Context)
 }
 
 type Service struct {
@@ -247,140 +217,4 @@ func handleRequest[T any, R any](c *gin.Context, fn func(context.Context, *T) (R
 		return
 	}
 	c.JSON(http.StatusOK, resp)
-}
-
-func handleStreamRequest[T any, R any, F ~func(R) error](c *gin.Context, fn func(context.Context, *T, F) error) {
-	var req T
-	if !bindRequest(c, &req) {
-		return
-	}
-	ch := make(chan any)
-	go func() {
-		defer func(ch chan any) {
-			close(ch)
-		}(ch)
-		fn(c.Request.Context(), &req, func(pr R) error {
-			ch <- pr
-			return nil
-		})
-	}()
-	b, err := extractBoolPointerFromRequest(&req)
-	if err != nil {
-		abortGinError(c, err)
-		return
-	}
-	if b != nil && !*b {
-		waitForStream(c, ch)
-		return
-	}
-	streamResponse(c, ch)
-}
-
-// shamelessly copied from https://raw.githubusercontent.com/ollama/ollama/refs/tags/v0.5.11/server/routes.go
-func waitForStream(c *gin.Context, ch chan interface{}) {
-	c.Header("Content-Type", "application/json")
-	for resp := range ch {
-		switch r := resp.(type) {
-		case api.ChatResponse:
-			if r.Done {
-				c.JSON(http.StatusOK, r)
-				return
-			}
-		case api.ProgressResponse:
-			if r.Status == "success" {
-				c.JSON(http.StatusOK, r)
-				return
-			}
-		case api.GenerateResponse:
-			if r.Done {
-				c.JSON(http.StatusOK, r)
-				return
-			}
-		case gin.H:
-			status, ok := r["status"].(int)
-			if !ok {
-				status = http.StatusInternalServerError
-			}
-			if errorMsg, ok := r["error"].(string); ok {
-				c.JSON(status, gin.H{"error": errorMsg})
-				return
-			} else {
-				c.JSON(status, gin.H{"error": "unexpected error format in progress response"})
-				return
-			}
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected progress response"})
-			return
-		}
-	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected end of progress response"})
-}
-
-// shamelessly copied from https://raw.githubusercontent.com/ollama/ollama/refs/tags/v0.5.11/server/routes.go
-func streamResponse(c *gin.Context, ch chan any) {
-	c.Header("Content-Type", "application/x-ndjson")
-	c.Stream(func(w io.Writer) bool {
-		val, ok := <-ch
-		if !ok {
-			return false
-		}
-
-		bts, err := json.Marshal(val)
-		if err != nil {
-			slog.Info(fmt.Sprintf("streamResponse: json.Marshal failed with %s", err))
-			return false
-		}
-
-		// Delineate chunks with new-line delimiter
-		bts = append(bts, '\n')
-		if _, err := w.Write(bts); err != nil {
-			slog.Info(fmt.Sprintf("streamResponse: w.Write failed with %s", err))
-			return false
-		}
-
-		return true
-	})
-}
-
-func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
-	if ctx == nil {
-		return nil, errors.New("missing context")
-	}
-	if pc == nil {
-		return nil, errors.New("missing proxy config")
-	}
-	if len(pc) == 0 {
-		return nil, errors.New("empty proxy config map")
-	}
-	cmap := map[string]IOllamaClient{}
-	for k, v := range pc {
-		l := log.WithField("server", v.Url)
-		remote, err := url.Parse(v.Url)
-		if err != nil {
-			return nil, err
-		}
-		client := api.NewClient(remote, http.DefaultClient)
-
-		name := model.ParseName(k)
-		if !name.IsValid() {
-			return nil, fmt.Errorf("invalid model name: %s", k)
-		}
-		cmap[name.DisplayShortest()] = client
-
-		version, err := client.Version(ctx)
-		if err == nil {
-			l.WithField("version", version).Tracef("Connected to server.")
-		}
-	}
-
-	return cmap, nil
-}
-
-func abortGinError(c *gin.Context, err error) {
-	var httpErr *HttpError
-	if errors.As(err, &httpErr) {
-		c.AbortWithStatusJSON(httpErr.StatusCode(), gin.H{"error": httpErr.Error()})
-		return
-	}
-	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 }
