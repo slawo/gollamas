@@ -9,4 +9,5 @@ RUN  echo \
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+RUN go install github.com/vektra/mockery/v2@v2.52.1
 RUN chown -R vscode /go

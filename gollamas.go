@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,9 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"slices"
-	"strings"
-	"sync"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -20,34 +16,92 @@ import (
 	"github.com/ollama/ollama/api"
 	"github.com/ollama/ollama/envconfig"
 	"github.com/ollama/ollama/openai"
-	"github.com/ollama/ollama/types/errtypes"
 	"github.com/ollama/ollama/types/model"
 	log "github.com/sirupsen/logrus"
 )
 
 type ProxyConfig struct {
-	url string
+	Url string
+}
+
+func NewHttpError(code int, message string) *HttpError {
+	return &HttpError{
+		Code:    code,
+		Message: message,
+	}
+}
+
+type HttpError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (e *HttpError) Error() string {
+	return e.Message
+}
+
+func (e *HttpError) StatusCode() int {
+	return e.Code
 }
 
 // NewService instantiates a new instance of the [Service].
 // Hail to the llamas!
-func NewService(ctx context.Context, cfg map[string]ProxyConfig) (*Service, error) {
-	cmap, err := initClients(ctx, cfg)
-	if err != nil {
-		return nil, err
+func NewService(ctx context.Context, r IOllamaClient) (*Service, error) {
+	if ctx == nil {
+		return nil, errors.New("missing context")
+	}
+	if r == nil {
+		return nil, errors.New("missing ollama client")
 	}
 	return &Service{
-		cfg:  cfg,
-		cmap: cmap,
+		r: r,
 	}, nil
 }
 
-type Service struct {
-	cfg  map[string]ProxyConfig
-	cmap map[string]*api.Client
+//go:generate mockery --name IOllamaClient --output mocks
+type IOllamaClient interface {
+	Generate(ctx context.Context, req *api.GenerateRequest, fn api.GenerateResponseFunc) error
+	Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResponseFunc) error
+	Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error
+	Push(ctx context.Context, req *api.PushRequest, fn api.PushProgressFunc) error
+	Create(ctx context.Context, req *api.CreateRequest, fn api.CreateProgressFunc) error
+	List(ctx context.Context) (*api.ListResponse, error)
+	ListRunning(ctx context.Context) (*api.ProcessResponse, error)
+	Copy(ctx context.Context, req *api.CopyRequest) error
+	Delete(ctx context.Context, req *api.DeleteRequest) error
+	Show(ctx context.Context, req *api.ShowRequest) (*api.ShowResponse, error)
+	Heartbeat(ctx context.Context) error
+	Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error)
+	Embeddings(ctx context.Context, req *api.EmbeddingRequest) (*api.EmbeddingResponse, error)
+	CreateBlob(ctx context.Context, digest string, r io.Reader) error
+	Version(ctx context.Context) (string, error)
 }
 
-func (s *Service) GenerateRoutes() http.Handler {
+//go:generate mockery --name IGinService --output mocks
+type IGinService interface {
+	ChatHandler(c *gin.Context)
+	CopyHandler(c *gin.Context)
+	CreateBlobHandler(c *gin.Context)
+	CreateHandler(c *gin.Context)
+	DeleteHandler(c *gin.Context)
+	EmbeddingsHandler(c *gin.Context)
+	EmbedHandler(c *gin.Context)
+	GenerateHandler(c *gin.Context)
+	HeadBlobHandler(c *gin.Context)
+	HomeHandler(c *gin.Context)
+	ListHandler(c *gin.Context)
+	PsHandler(c *gin.Context)
+	PullHandler(c *gin.Context)
+	PushHandler(c *gin.Context)
+	ShowHandler(c *gin.Context)
+	VersionHandler(c *gin.Context)
+}
+
+type Service struct {
+	r IOllamaClient
+}
+
+func (s *Service) GenerateRoutes() *gin.Engine {
 	config := cors.DefaultConfig()
 	config.AllowWildcard = true
 	config.AllowBrowserExtensions = true
@@ -103,135 +157,23 @@ func (s *Service) HomeHandler(c *gin.Context) {
 }
 
 func (s *Service) PullHandler(c *gin.Context) {
-	var req api.PullRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, cmp.Or(req.Model, req.Name))
-	if cl == nil {
-		return
-	}
-
-	log.WithField("name", cmp.Or(req.Model, req.Name)).Info("Will pull model")
-	ch := make(chan any)
-	go func() {
-		defer close(ch)
-		cl.Pull(c.Request.Context(), &req, func(pr api.ProgressResponse) error {
-			ch <- pr
-			return nil
-		})
-	}()
-	if req.Stream != nil && !*req.Stream {
-		waitForStream(c, ch)
-		return
-	}
-	streamResponse(c, ch)
+	handleStreamRequest(c, s.r.Pull)
 }
 
 func (s *Service) GenerateHandler(c *gin.Context) {
-	var req api.GenerateRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, req.Model)
-	if cl == nil {
-		return
-	}
-	ch := make(chan any)
-	go func() {
-		defer close(ch)
-		cl.Generate(c.Request.Context(), &req, func(gr api.GenerateResponse) error {
-			ch <- gr
-			return nil
-		})
-	}()
-
-	if req.Stream != nil && !*req.Stream {
-		var r api.GenerateResponse
-		var sb strings.Builder
-		for rr := range ch {
-			switch t := rr.(type) {
-			case api.GenerateResponse:
-				sb.WriteString(t.Response)
-				r = t
-			case gin.H:
-				msg, ok := t["error"].(string)
-				if !ok {
-					msg = "unexpected error format in response"
-				}
-
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			default:
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected response"})
-				return
-			}
-		}
-
-		r.Response = sb.String()
-		c.JSON(http.StatusOK, r)
-		return
-	}
-	streamResponse(c, ch)
+	handleStreamRequest(c, s.r.Generate)
 }
 
 func (s *Service) ChatHandler(c *gin.Context) {
-	var req api.ChatRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, req.Model)
-	if cl == nil {
-		return
-	}
-
-	ch := make(chan any)
-	go func() {
-		defer close(ch)
-		cl.Chat(c.Request.Context(), &req, func(pr api.ChatResponse) error {
-			ch <- pr
-			return nil
-		})
-	}()
-	if req.Stream != nil && !*req.Stream {
-		waitForStream(c, ch)
-		return
-	}
-	streamResponse(c, ch)
+	handleStreamRequest(c, s.r.Chat)
 }
 
 func (s *Service) EmbedHandler(c *gin.Context) {
-	var req api.EmbedRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, req.Model)
-	if cl == nil {
-		return
-	}
-	resp, err := cl.Embed(c.Request.Context(), &req)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, resp)
+	handleRequest(c, s.r.Embed)
 }
 
 func (s *Service) EmbeddingsHandler(c *gin.Context) {
-	var req api.EmbeddingRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, req.Model)
-	if cl == nil {
-		return
-	}
-	resp, err := cl.Embeddings(c.Request.Context(), &req)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, resp)
+	handleRequest(c, s.r.Embeddings)
 }
 
 func (s *Service) CreateHandler(c *gin.Context) {
@@ -251,20 +193,7 @@ func (s *Service) DeleteHandler(c *gin.Context) {
 }
 
 func (s *Service) ShowHandler(c *gin.Context) {
-	var req api.ShowRequest
-	if !s.bindRequest(c, &req) {
-		return
-	}
-	cl := s.getClientByModel(c, cmp.Or(req.Model, req.Name))
-	if cl == nil {
-		return
-	}
-	resp, err := cl.Show(c.Request.Context(), &req)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, resp)
+	handleRequest(c, s.r.Show)
 }
 
 func (s *Service) CreateBlobHandler(c *gin.Context) {
@@ -276,89 +205,18 @@ func (s *Service) HeadBlobHandler(c *gin.Context) {
 }
 
 func (s *Service) PsHandler(c *gin.Context) {
-	ch := make(chan *api.ProcessResponse)
-	wg := sync.WaitGroup{}
-	for _, v := range s.cmap {
-		wg.Add(1)
-		go func(cl *api.Client) {
-			defer wg.Done()
-			v, err := cl.ListRunning(c.Request.Context())
-			if err != nil {
-				log.WithError(err).Errorf("Failed to retrieve running models")
-			}
-			ch <- v
-		}(v)
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	var res api.ProcessResponse
-	for pr := range ch {
-		res.Models = append(res.Models, pr.Models...)
-	}
-	c.JSON(http.StatusOK, res)
+	handle(c, s.r.ListRunning)
 }
 
 func (s *Service) ListHandler(c *gin.Context) {
-	ch := make(chan *api.ListResponse)
-	wg := sync.WaitGroup{}
-	for _, v := range s.cmap {
-		wg.Add(1)
-		go func(cl *api.Client) {
-			defer wg.Done()
-			v, err := cl.List(c.Request.Context())
-			if err != nil {
-				log.WithError(err).Errorf("Failed to retrieve running models")
-			}
-			ch <- v
-		}(v)
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	var res api.ListResponse
-	for lr := range ch {
-		if lr != nil && lr.Models != nil {
-			res.Models = append(res.Models, lr.Models...)
-		}
-	}
-	slices.SortStableFunc(res.Models, func(i, j api.ListModelResponse) int {
-		// most recently modified first
-		return cmp.Compare(j.ModifiedAt.Unix(), i.ModifiedAt.Unix())
-	})
-	c.JSON(http.StatusOK, res)
+	handle(c, s.r.List)
 }
 
 func (s *Service) VersionHandler(c *gin.Context) {
-	ch := make(chan string)
-	wg := sync.WaitGroup{}
-	for _, v := range s.cmap {
-		wg.Add(1)
-		go func(cl *api.Client) {
-			defer wg.Done()
-			v, err := cl.Version(c.Request.Context())
-			if err != nil {
-				log.WithError(err).Errorf("Failed to retrieve version")
-			}
-			ch <- v
-		}(v)
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	v := ""
-	for i := range ch {
-		if v == "" || i < v {
-			v = i
-		}
-	}
-	c.JSON(http.StatusOK, gin.H{"version": v})
+	handle(c, s.r.Version)
 }
 
-func (s *Service) bindRequest(c *gin.Context, req any) bool {
+func bindRequest(c *gin.Context, req any) bool {
 	if err := c.ShouldBindJSON(req); errors.Is(err, io.EOF) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing request body"})
 		return false
@@ -369,19 +227,53 @@ func (s *Service) bindRequest(c *gin.Context, req any) bool {
 	return true
 }
 
-func (s *Service) getClientByModel(c *gin.Context, m string) *api.Client {
-	name := model.ParseName(m)
-	if !name.IsValid() {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errtypes.InvalidModelNameErrMsg})
-		return nil
+func handle[R any](c *gin.Context, fn func(context.Context) (R, error)) {
+	resp, err := fn(c.Request.Context())
+	if err != nil {
+		abortGinError(c, err)
+		return
 	}
-	cl, ok := s.cmap[name.DisplayShortest()]
-	if !ok {
-		log.WithField("name", name).Errorf("Client for model not found")
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "gollamas router is missing a valid route to model"})
-		return nil
+	c.JSON(http.StatusOK, resp)
+}
+
+func handleRequest[T any, R any](c *gin.Context, fn func(context.Context, *T) (R, error)) {
+	var req T
+	if !bindRequest(c, &req) {
+		return
 	}
-	return cl
+	resp, err := fn(c.Request.Context(), &req)
+	if err != nil {
+		abortGinError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func handleStreamRequest[T any, R any, F ~func(R) error](c *gin.Context, fn func(context.Context, *T, F) error) {
+	var req T
+	if !bindRequest(c, &req) {
+		return
+	}
+	ch := make(chan any)
+	go func() {
+		defer func(ch chan any) {
+			close(ch)
+		}(ch)
+		fn(c.Request.Context(), &req, func(pr R) error {
+			ch <- pr
+			return nil
+		})
+	}()
+	b, err := extractBoolPointerFromRequest(&req)
+	if err != nil {
+		abortGinError(c, err)
+		return
+	}
+	if b != nil && !*b {
+		waitForStream(c, ch)
+		return
+	}
+	streamResponse(c, ch)
 }
 
 // shamelessly copied from https://raw.githubusercontent.com/ollama/ollama/refs/tags/v0.5.11/server/routes.go
@@ -389,8 +281,18 @@ func waitForStream(c *gin.Context, ch chan interface{}) {
 	c.Header("Content-Type", "application/json")
 	for resp := range ch {
 		switch r := resp.(type) {
+		case api.ChatResponse:
+			if r.Done {
+				c.JSON(http.StatusOK, r)
+				return
+			}
 		case api.ProgressResponse:
 			if r.Status == "success" {
+				c.JSON(http.StatusOK, r)
+				return
+			}
+		case api.GenerateResponse:
+			if r.Done {
 				c.JSON(http.StatusOK, r)
 				return
 			}
@@ -440,11 +342,20 @@ func streamResponse(c *gin.Context, ch chan any) {
 	})
 }
 
-func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]*api.Client, error) {
-	cmap := map[string]*api.Client{}
+func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
+	if ctx == nil {
+		return nil, errors.New("missing context")
+	}
+	if pc == nil {
+		return nil, errors.New("missing proxy config")
+	}
+	if len(pc) == 0 {
+		return nil, errors.New("empty proxy config map")
+	}
+	cmap := map[string]IOllamaClient{}
 	for k, v := range pc {
-		l := log.WithField("server", v.url)
-		remote, err := url.Parse(v.url)
+		l := log.WithField("server", v.Url)
+		remote, err := url.Parse(v.Url)
 		if err != nil {
 			return nil, err
 		}
@@ -463,4 +374,13 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]*ap
 	}
 
 	return cmap, nil
+}
+
+func abortGinError(c *gin.Context, err error) {
+	var httpErr *HttpError
+	if errors.As(err, &httpErr) {
+		c.AbortWithStatusJSON(httpErr.StatusCode(), gin.H{"error": httpErr.Error()})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 }

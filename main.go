@@ -89,7 +89,7 @@ func initProxyConfig(ss []string) (map[string]ProxyConfig, error) {
 		}
 
 		res[v[0]] = ProxyConfig{
-			url: v[1],
+			Url: v[1],
 		}
 	}
 	return res, nil
@@ -109,7 +109,17 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 		return err
 	}
 
-	s, err := NewService(ctx, pConf)
+	cmap, err := initClients(ctx, pConf)
+	if err != nil {
+		return err
+	}
+
+	r, err := NewRouter(ctx, cmap)
+	if err != nil {
+		return err
+	}
+
+	s, err := NewService(ctx, r)
 	if err != nil {
 		return err
 	}
