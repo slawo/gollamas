@@ -6,7 +6,7 @@ A "reverse proxy" for multiple ollama servers running various models.
 [![CI status](https://flat.badgen.net/github/checks/slawo/gollamas)](https://github.com/slawo/gollamas/actions)
 [![docker hub](https://flat.badgen.net/docker/pulls/slawoc/gollamas)](https://hub.docker.com/r/slawoc/gollamas)
 
-This is a lowest effort implementation of a reverse proxy for ollama, it accepts chat and generation requests which relly on a model and runs the query on a server which has been specifically assigned to run the given model.
+This is a lowest effort implementation of a reverse proxy for ollama, it takes chat and generation requests and depending on the model in the request it will dispatch the request to a server which has been specifically assigned to run the given model.
 
 ## run locally
 
