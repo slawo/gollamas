@@ -6,6 +6,22 @@ on:
         description: "The release version to use"
         required: true
         type: string
+      release-major:
+        description: "Number representing major semver value"
+        required: true
+        type: string
+      release-minor:
+        description: "Number representing minor semver value"
+        required: true
+        type: string
+      release-patch:
+        description: "Number representing patch semver value"
+        required: true
+        type: string
+      release-sha:
+        description: "SHA that a GitHub release was tagged at"
+        required: true
+        type: string
       go-version:
         description: "The go version to use"
         default: "1.23"
@@ -95,6 +111,8 @@ jobs:
         merge-multiple: true
 
     - name: Move binaries
+      env:
+        RELEASE_SEMVER: ${{ inputs.release-major }}.${{ inputs.release-minor }}.${{ inputs.release-patch }}
       run: |
         mkdir -p \
           .bin/linux/386 \
@@ -105,14 +123,14 @@ jobs:
           .bin/linux/ppc64le \
           .bin/linux/riscv64 \
           .bin/linux/s390x
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_386.tar.gz     -C .bin/linux/386/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_amd64.tar.gz   -C .bin/linux/amd64/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_arm64.tar.gz   -C .bin/linux/arm64/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_armv6.tar.gz   -C .bin/linux/arm/v6/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_armv7.tar.gz   -C .bin/linux/arm/v7/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_ppc64le.tar.gz -C .bin/linux/ppc64le/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_riscv64.tar.gz -C .bin/linux/riscv64/
-        tar -xzf dist/gollamas_${{ inputs.release-version }}_linux_s390x.tar.gz   -C .bin/linux/s390x/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_386.tar.gz     -C .bin/linux/386/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_amd64.tar.gz   -C .bin/linux/amd64/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_arm64.tar.gz   -C .bin/linux/arm64/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_armv6.tar.gz   -C .bin/linux/arm/v6/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_armv7.tar.gz   -C .bin/linux/arm/v7/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_ppc64le.tar.gz -C .bin/linux/ppc64le/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_riscv64.tar.gz -C .bin/linux/riscv64/
+        tar -xzf dist/gollamas_${RELEASE_SEMVER}_linux_s390x.tar.gz   -C .bin/linux/s390x/
 
     - name: Docker meta
       id: meta

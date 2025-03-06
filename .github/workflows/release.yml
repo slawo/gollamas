@@ -35,4 +35,8 @@ jobs:
     uses: ./.github/workflows/release-artifacts.yml
     with:
       release-version: ${{ needs.release-please.outputs.tag_name }}
+      release-major: ${{ needs.release-please.outputs.major }}
+      release-minor: ${{ needs.release-please.outputs.minor }}
+      release-patch: ${{ needs.release-please.outputs.patch }}
+      release-sha: ${{ needs.release-please.outputs.sha }}
     secrets: inherit
