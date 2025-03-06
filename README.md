@@ -18,12 +18,16 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 
 # Features
 
-  - [ ] Preload models (ensure model is loaded uppon startup)
-  - [ ] Ping models (maintain model loaded)
-  - Fixed size context
-    - [ ] Configure global context size
-    - [ ] Enforce context size in each request
-    - [ ] Configure context size per model/server
+  - Fix model in memory
+    - [ ] Preload models (ensure model is loaded uppon startup)
+    - [ ] Ping models (maintain model loaded)
+    - [ ] Add config to enforce model keep alive globally `"keep_alive": -1`
+    - [ ] Add config to override model keep alive per model/server `"keep_alive": -1`
+  - Fixed size context `"options": { "num_ctx": 4096 }`
+    - [ ] Add config to set a default context size (if missing) in each request `"options": { "num_ctx": 4096 }`
+    - [ ] Add config to set a default context size (if missing) per model/server `"options": { "num_ctx": 4096 }`
+    - [ ] Add config to enforce context size in each request `"options": { "num_ctx": 4096 }`
+    - [ ] Add config to enforce context size per model/server `"options": { "num_ctx": 4096 }`
   - Proxy API
 	- [ ] `DELETE /api/delete`
 	- [V] `GET /`
