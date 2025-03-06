@@ -191,16 +191,16 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 	return &res, nil
 }
 
-func (r *Router) Push(ctx context.Context, req *api.PushRequest, fn api.PushProgressFunc) error {
-	return NewHttpError(http.StatusNotFound, "gollamas: router doesn't support pushing models")
-}
-
 func (r *Router) Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error {
 	cl, err := r.getClientByModel(ctx, cmp.Or(req.Model, req.Name))
 	if err != nil {
 		return err
 	}
 	return cl.Pull(ctx, req, fn)
+}
+
+func (r *Router) Push(ctx context.Context, req *api.PushRequest, fn api.PushProgressFunc) error {
+	return NewHttpError(http.StatusNotFound, "gollamas: router doesn't support pushing models")
 }
 
 func (r *Router) Show(ctx context.Context, req *api.ShowRequest) (*api.ShowResponse, error) {
@@ -269,7 +269,6 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOl
 			return nil, err
 		}
 		client := api.NewClient(remote, http.DefaultClient)
-
 		name := model.ParseName(k)
 		if !name.IsValid() {
 			return nil, fmt.Errorf("invalid model name: %s", k)
