@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/slawo/gollamas/compare/v0.2.2...v0.2.3) (2025-03-06)
+
+
+### Bug Fixes
+
+* package naming template ([e25f8fb](https://github.com/slawo/gollamas/commit/e25f8fb171dd2db4af27022227ee12ff92f8f37e))
+
 ## [0.2.2](https://github.com/slawo/gollamas/compare/v0.2.1...v0.2.2) (2025-03-06)
 
 
