@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/slawo/gollamas/compare/v0.2.3...v0.2.4) (2025-03-06)
+
+
+### Bug Fixes
+
+* change the release name of the packages used for docker ([f3616ae](https://github.com/slawo/gollamas/commit/f3616aef74024d29f36f19a7f3ec7d6bd761ff8a))
+
 ## [0.2.3](https://github.com/slawo/gollamas/compare/v0.2.2...v0.2.3) (2025-03-06)
 
 
