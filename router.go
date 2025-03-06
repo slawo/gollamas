@@ -188,6 +188,10 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 			res.Models = append(res.Models, pr.v.Models...)
 		}
 	}
+	slices.SortStableFunc(res.Models, func(i, j api.ProcessModelResponse) int {
+		// most recently modified first
+		return -1 * cmp.Compare(j.Name, i.Name)
+	})
 	return &res, nil
 }
 
