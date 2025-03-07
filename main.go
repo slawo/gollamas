@@ -18,7 +18,7 @@ func main() {
 	err := (&cli.Command{
 		Name:    appName,
 		Authors: []any{"Slawomir Caluch"},
-		Action:  runGollamas,
+		Action:  runGollamasCli,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "listen",
@@ -95,7 +95,7 @@ func initProxyConfig(ss []string) (map[string]ProxyConfig, error) {
 	return res, nil
 }
 
-func runGollamas(ctx context.Context, cli *cli.Command) error {
+func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	if err := initErrorLevel(cli.String("level")); err != nil {
 		return err
 	}
@@ -110,8 +110,19 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	if err != nil {
 		return err
 	}
+	return runGollamas(ctx, GollamasConfig{
+		Listen:  cli.String("listen"),
+		Proxies: pConf,
+	})
+}
 
-	cmap, err := initClients(ctx, pConf)
+type GollamasConfig struct {
+	Listen  string
+	Proxies map[string]ProxyConfig
+}
+
+func runGollamas(ctx context.Context, cfg GollamasConfig) error {
+	cmap, err := initClients(ctx, cfg.Proxies)
 	if err != nil {
 		return err
 	}
@@ -127,7 +138,7 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	}
 
 	rs := s.GenerateRoutes()
-	addr := cli.String("listen")
+	addr := cfg.Listen
 
 	log.Printf("Starting server on %s", addr)
 	return http.ListenAndServe(addr, rs)
