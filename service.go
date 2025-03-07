@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -19,6 +20,10 @@ func NewHttpError(code int, message string) *HttpError {
 		Code:    code,
 		Message: message,
 	}
+}
+
+func NewHttpErrorf(code int, message string, opts ...any) *HttpError {
+	return NewHttpError(code, fmt.Sprintf(message, opts...))
 }
 
 type HttpError struct {
