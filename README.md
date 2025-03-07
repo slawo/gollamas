@@ -23,12 +23,16 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 
 # Features
 
-  - Fix model in memory
+  - Manage models
+    - [ ] Map model aliases to existing model names (some tools only allow a pre-defined set of models)
+    - [ ] Set that by default only the configured models are returned when listing models
+    - [ ] Set option to allow requests to currently running models (ie server has additional model running)
+  - Set model in memory
     - [ ] Preload models (ensure model is loaded uppon startup)
     - [ ] Ping models (maintain model loaded)
     - [ ] Add config to enforce model keep alive globally `"keep_alive": -1`
     - [ ] Add config to override model keep alive per model/server `"keep_alive": -1`
-  - Fixed size context `"options": { "num_ctx": 4096 }`
+  - Set fixed size context `"options": { "num_ctx": 4096 }`
     - [ ] Add config to set a default context size (if missing) in each request `"options": { "num_ctx": 4096 }`
     - [ ] Add config to set a default context size (if missing) per model/server `"options": { "num_ctx": 4096 }`
     - [ ] Add config to enforce context size in each request `"options": { "num_ctx": 4096 }`
