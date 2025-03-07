@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/ollama/ollama/api"
-	"github.com/ollama/ollama/types/errtypes"
 	"github.com/ollama/ollama/types/model"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,7 +37,10 @@ func NewRouter(ctx context.Context, cmap map[string]IOllamaClient) (*Router, err
 			return nil, fmt.Errorf("nil client for model %s", id)
 		}
 		name := model.ParseName(id)
-		clids[name.DisplayShortest()] = cl
+		if !name.IsValid() {
+			return nil, fmt.Errorf("invalid model name: %s", id)
+		}
+		clids[id] = cl
 	}
 	return &Router{
 		cmap: clids,
@@ -276,14 +278,9 @@ func (r *Router) Version(ctx context.Context) (string, error) {
 }
 
 func (r *Router) getClientByModel(ctx context.Context, m string) (IOllamaClient, error) {
-	name := model.ParseName(m)
-	if !name.IsValid() {
-		log.WithField("name", name).Errorf("Invalid model name")
-		return nil, NewHttpError(http.StatusBadRequest, errtypes.InvalidModelNameErrMsg)
-	}
-	cl, ok := r.cmap[name.DisplayShortest()]
+	cl, ok := r.cmap[m]
 	if !ok {
-		return nil, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", name.DisplayShortest())
+		return nil, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", m)
 	}
 	return cl, nil
 }
