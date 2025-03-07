@@ -18,13 +18,9 @@ func extractBoolPointerFromRequest(req any) (*bool, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing Stream field in %s", t)
 	}
-	// if f == nil {
-	// 	return nil, nil
-	// }
 	if f.Type != reflect.TypeOf((*bool)(nil)) {
 		return nil, fmt.Errorf("expected *bool, got %s", f.Type)
 	}
-	// get the value of the Stream field
 	v := reflect.ValueOf(req).Elem().FieldByName("Stream")
 	if v.IsNil() {
 		return nil, nil
