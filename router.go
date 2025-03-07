@@ -137,6 +137,9 @@ func (r *Router) List(ctx context.Context) (*api.ListResponse, error) {
 			if err != nil {
 				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve running models")
 			}
+			if v != nil {
+				v.Models = r.filterListToMapedModels(v.Models, id)
+			}
 			ch <- v
 		}(id, v)
 	}
@@ -155,6 +158,36 @@ func (r *Router) List(ctx context.Context) (*api.ListResponse, error) {
 		return cmp.Compare(j.ModifiedAt.Unix(), i.ModifiedAt.Unix())
 	})
 	return &res, nil
+}
+
+func (r *Router) filterListToMapedModels(orig []api.ListModelResponse, ids ...string) []api.ListModelResponse {
+	idsmap := map[string]string{}
+	for _, id := range ids {
+		idsmap[id] = id
+		name := model.ParseName(id)
+		idsmap[name.DisplayShortest()] = id
+		idsmap[name.String()] = id
+	}
+	var res []api.ListModelResponse
+	for _, m := range orig {
+		log.WithField("name", m.Name).WithField("model", m.Model).Trace("Filtering model.")
+		if id, ok := idsmap[m.Model]; ok {
+			m.Model = id
+			res = append(res, m)
+		} else {
+			name := model.ParseName(m.Model)
+			if id, ok := idsmap[name.DisplayShortest()]; ok {
+				m.Model = id
+				res = append(res, m)
+			} else if id, ok := idsmap[name.String()]; ok {
+				m.Model = id
+				res = append(res, m)
+			} else {
+				log.WithField("name", m.Name).WithField("model", m.Model).Trace("Model has been filtered out of response.")
+			}
+		}
+	}
+	return res
 }
 
 func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) {
