@@ -103,7 +103,9 @@ func runGollamas(ctx context.Context, cli *cli.Command) error {
 	defer log.Tracef("ending")
 
 	p := append([]string{}, cli.StringSlice("proxy")...)
-	p = append(p, strings.Split(cli.String("proxies"), ",")...)
+	if cli.String("proxies") != "" {
+		p = append(p, strings.Split(cli.String("proxies"), ",")...)
+	}
 	pConf, err := initProxyConfig(p)
 	if err != nil {
 		return err
