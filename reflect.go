@@ -12,7 +12,7 @@ func extractBoolPointerFromRequest(req any) (*bool, error) {
 	}
 	t = t.Elem()
 	if t.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("expected pointer to struct, got %s", t.Kind())
+		return nil, fmt.Errorf("expected pointer to struct, got pointer to %s", t.Kind())
 	}
 	f, ok := t.FieldByName("Stream")
 	if !ok {
@@ -26,9 +26,6 @@ func extractBoolPointerFromRequest(req any) (*bool, error) {
 	}
 	// get the value of the Stream field
 	v := reflect.ValueOf(req).Elem().FieldByName("Stream")
-	if v.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("expected pointer to bool, got %s", v.Kind())
-	}
 	if v.IsNil() {
 		return nil, nil
 	}
