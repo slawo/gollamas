@@ -55,6 +55,17 @@ func main() {
 				Usage:     `defines a list of proxies per model given model ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
 				Sources:   cli.EnvVars("GOLLAMAS_PROXIES", "PROXIES"),
 			},
+			&cli.StringSliceFlag{
+				Name:      "alias",
+				Usage:     `assigns an alias from an existing model name passed in the proxy configuration 'alias=concrete_model' ex: --alias gpt-3.5-turbo=llama3.2`,
+				Validator: validateProxies,
+			},
+			&cli.StringFlag{
+				Name:      "aliases",
+				Validator: validateCSProxies,
+				Usage:     `sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b'`,
+				Sources:   cli.EnvVars("GOLLAMAS_ALIASES", "ALIASES"),
+			},
 		},
 		Commands: []*cli.Command{
 			getVersionCommand(),
@@ -95,6 +106,25 @@ func initProxyConfig(ss []string) (map[string]ProxyConfig, error) {
 	return res, nil
 }
 
+func initAliasesMap(ss []string) (map[string]string, error) {
+	aliases := map[string]string{}
+	log.WithField("aliases", aliases).Trace("Initialize aliases")
+	for _, s := range ss {
+		v := strings.SplitN(s, "=", 2)
+		if len(v) != 2 {
+			return nil, fmt.Errorf("invalid alias string: %s", s)
+		}
+		if v[0] == "" {
+			return nil, fmt.Errorf("empty alias name in: %s", s)
+		}
+		if v[1] == "" {
+			return nil, fmt.Errorf("empty alias model in: %s", s)
+		}
+		aliases[v[0]] = v[1]
+	}
+	return aliases, nil
+}
+
 func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	if err := initErrorLevel(cli.String("level")); err != nil {
 		return err
@@ -102,7 +132,16 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	log.Tracef("starting")
 	defer log.Tracef("ending")
 
-	p := append([]string{}, cli.StringSlice("proxy")...)
+	p := append([]string{}, cli.StringSlice("alias")...)
+	if cli.String("aliases") != "" {
+		p = append(p, strings.Split(cli.String("aliases"), ",")...)
+	}
+	aliases, err := initAliasesMap(p)
+	if err != nil {
+		return err
+	}
+
+	p = append([]string{}, cli.StringSlice("proxy")...)
 	if cli.String("proxies") != "" {
 		p = append(p, strings.Split(cli.String("proxies"), ",")...)
 	}
@@ -113,12 +152,14 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	return runGollamas(ctx, GollamasConfig{
 		Listen:  cli.String("listen"),
 		Proxies: pConf,
+		Aliases: aliases,
 	})
 }
 
 type GollamasConfig struct {
 	Listen  string
 	Proxies map[string]ProxyConfig
+	Aliases map[string]string
 }
 
 func runGollamas(ctx context.Context, cfg GollamasConfig) error {
@@ -127,7 +168,9 @@ func runGollamas(ctx context.Context, cfg GollamasConfig) error {
 		return err
 	}
 
-	r, err := NewRouter(ctx, cmap)
+	ropts := initRouterAliasOpts(cfg.Aliases)
+
+	r, err := NewRouter(ctx, cmap, ropts...)
 	if err != nil {
 		return err
 	}

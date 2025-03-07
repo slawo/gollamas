@@ -21,7 +21,7 @@ type ProxyConfig struct {
 }
 
 // NewRouter creates a new router
-func NewRouter(ctx context.Context, cmap map[string]IOllamaClient) (*Router, error) {
+func NewRouter(ctx context.Context, cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, error) {
 	if ctx == nil {
 		return nil, errors.New("missing context")
 	}
@@ -42,21 +42,33 @@ func NewRouter(ctx context.Context, cmap map[string]IOllamaClient) (*Router, err
 		}
 		clids[id] = cl
 	}
-	return &Router{
+	opt := RouterOptions{}
+	for _, o := range opts {
+		if err := o.Apply(&opt); err != nil {
+			return nil, err
+		}
+	}
+	r := &Router{
 		cmap: clids,
-	}, nil
+	}
+	if err := r.setAliases(opt.aliases); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 // Router is a router that routes requests to the appropriate client
 type Router struct {
-	cmap map[string]IOllamaClient
+	aliases map[string]string
+	cmap    map[string]IOllamaClient
 }
 
 func (r *Router) Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResponseFunc) error {
-	cl, err := r.getClientByModel(ctx, req.Model)
+	cl, m, err := r.getClientAndModelByModelName(req.Model)
 	if err != nil {
 		return err
 	}
+	req.Model = m
 	return cl.Chat(ctx, req, fn)
 }
 
@@ -77,26 +89,29 @@ func (r *Router) Delete(ctx context.Context, req *api.DeleteRequest) error {
 }
 
 func (r *Router) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error) {
-	cl, err := r.getClientByModel(ctx, req.Model)
+	cl, m, err := r.getClientAndModelByModelName(req.Model)
 	if err != nil {
 		return nil, err
 	}
+	req.Model = m
 	return cl.Embed(ctx, req)
 }
 
 func (r *Router) Embeddings(ctx context.Context, req *api.EmbeddingRequest) (*api.EmbeddingResponse, error) {
-	cl, err := r.getClientByModel(ctx, req.Model)
+	cl, m, err := r.getClientAndModelByModelName(req.Model)
 	if err != nil {
 		return nil, err
 	}
+	req.Model = m
 	return cl.Embeddings(ctx, req)
 }
 
 func (r *Router) Generate(ctx context.Context, req *api.GenerateRequest, fn api.GenerateResponseFunc) error {
-	cl, err := r.getClientByModel(ctx, req.Model)
+	cl, m, err := r.getClientAndModelByModelName(req.Model)
 	if err != nil {
 		return err
 	}
+	req.Model = m
 	return cl.Generate(ctx, req, fn)
 }
 
@@ -231,9 +246,14 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 }
 
 func (r *Router) Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error {
-	cl, err := r.getClientByModel(ctx, cmp.Or(req.Model, req.Name))
+	cl, m, err := r.getClientAndModelByModelName(cmp.Or(req.Model, req.Name))
 	if err != nil {
 		return err
+	}
+	if req.Model == "" {
+		req.Name = m
+	} else {
+		req.Model = m
 	}
 	return cl.Pull(ctx, req, fn)
 }
@@ -243,9 +263,14 @@ func (r *Router) Push(ctx context.Context, req *api.PushRequest, fn api.PushProg
 }
 
 func (r *Router) Show(ctx context.Context, req *api.ShowRequest) (*api.ShowResponse, error) {
-	cl, err := r.getClientByModel(ctx, cmp.Or(req.Model, req.Name))
+	cl, m, err := r.getClientAndModelByModelName(cmp.Or(req.Model, req.Name))
 	if err != nil {
 		return nil, err
+	}
+	if req.Model == "" {
+		req.Name = m
+	} else {
+		req.Model = m
 	}
 	return cl.Show(ctx, req)
 }
@@ -277,12 +302,46 @@ func (r *Router) Version(ctx context.Context) (string, error) {
 	return v, nil
 }
 
-func (r *Router) getClientByModel(ctx context.Context, m string) (IOllamaClient, error) {
+func (r *Router) setAliases(aliases map[string]string) error {
+	if len(aliases) == 0 {
+		return nil
+	}
+	if r.aliases == nil {
+		r.aliases = map[string]string{}
+	}
+	for k, v := range aliases {
+		if _, ok := r.cmap[v]; !ok {
+			return fmt.Errorf("alias %s points to unknown model %s", k, v)
+		}
+		if _, ok := r.cmap[k]; ok {
+			return fmt.Errorf("alias %s refers to an existing concrete model name", k)
+		}
+		r.aliases[k] = v
+	}
+	return nil
+}
+
+func (r *Router) getClientAndModelByModelName(m string) (IOllamaClient, string, error) {
+	log.WithField("model", m).Trace("Routing: request")
+	modelName := m
 	cl, ok := r.cmap[m]
 	if !ok {
-		return nil, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", m)
+		log.WithField("model", m).Trace("Routing: no direct route to model.")
+		if alias, ok := r.aliases[m]; ok {
+			log.WithField("model_alias", alias).WithField("model", m).Trace("Routing: no direct route to model.")
+			modelName = alias
+			cl = r.cmap[modelName]
+		}
 	}
-	return cl, nil
+
+	if cl == nil {
+		if modelName != m {
+			return nil, m, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s (%s)", modelName, m)
+		}
+		return nil, m, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", modelName)
+	}
+
+	return cl, modelName, nil
 }
 
 func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
@@ -316,4 +375,10 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOl
 	}
 
 	return cmap, nil
+}
+
+func initRouterAliasOpts(aliases map[string]string) []RouterOption {
+	return []RouterOption{&RouterOptions{
+		aliases: aliases,
+	}}
 }

@@ -46,19 +46,29 @@ func TestNewRouterFailsOnNilClient(t *testing.T) {
 	assert.Nil(t, r)
 }
 
+func TestNewRouterFailOnInvalidAlias(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{
+		"llama3.2": c1,
+	}, gollamas.WithAlias("llama3", "wrong_model"))
+	assert.EqualError(t, err, "alias llama3 points to unknown model wrong_model")
+	assert.Nil(t, r)
+	c1.AssertExpectations(t)
+}
+
 func TestNewRouter(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{
 		"llama3.2": c1,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"))
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 	c1.AssertExpectations(t)
 }
 
-func newRouter(cmap map[string]gollamas.IOllamaClient) (context.Context, context.CancelFunc, *gollamas.Router, error) {
+func newRouter(cmap map[string]gollamas.IOllamaClient, opts ...gollamas.RouterOption) (context.Context, context.CancelFunc, *gollamas.Router, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	r, err := gollamas.NewRouter(ctx, cmap)
+	r, err := gollamas.NewRouter(ctx, cmap, opts...)
 	return ctx, cancel, r, err
 }
 
@@ -68,7 +78,7 @@ func TestRouterChat(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -86,11 +96,25 @@ func TestRouterChat(t *testing.T) {
 	err = r.Chat(ctx, req, cb)
 	assert.NoError(t, err)
 
+	reqAlias := &api.ChatRequest{
+		Model: "llama3",
+	}
+	c1.On("Chat", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Chat(ctx, reqAlias, cb)
+	assert.NoError(t, err)
+
 	req = &api.ChatRequest{
 		Model: "other_model",
 	}
 	c2.On("Chat", ctx, req, mock.Anything).Once().Return(nil)
 	err = r.Chat(ctx, req, cb)
+	assert.NoError(t, err)
+
+	reqAlias = &api.ChatRequest{
+		Model: "some_alias",
+	}
+	c2.On("Chat", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Chat(ctx, reqAlias, cb)
 	assert.NoError(t, err)
 
 	c2.On("Chat", ctx, req, mock.Anything).Once().Return(errors.New("some error"))
@@ -107,7 +131,7 @@ func TestRouterCopy(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -136,7 +160,7 @@ func TestRouterCreate(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -166,7 +190,7 @@ func TestRouterCreateBlob(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -188,7 +212,7 @@ func TestRouterDelete(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -216,7 +240,7 @@ func TestRouterEmbed(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -244,6 +268,15 @@ func TestRouterEmbed(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, out1, res)
 
+	reqAlias := &api.EmbedRequest{
+		Model: "llama3",
+		Input: "Why is the sky blue?",
+	}
+	c1.On("Embed", ctx, req).Once().Return(out1, nil)
+	res, err = r.Embed(ctx, reqAlias)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out1, res)
+
 	req = &api.EmbedRequest{
 		Model: "other_model",
 		Input: "Why is the sky blue?",
@@ -257,6 +290,15 @@ func TestRouterEmbed(t *testing.T) {
 	}
 	c2.On("Embed", ctx, req).Once().Return(out2, nil)
 	res, err = r.Embed(ctx, req)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out2, res)
+
+	reqAlias = &api.EmbedRequest{
+		Model: "some_alias",
+		Input: "Why is the sky blue?",
+	}
+	c2.On("Embed", ctx, req).Once().Return(out2, nil)
+	res, err = r.Embed(ctx, reqAlias)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out2, res)
 
@@ -280,7 +322,7 @@ func TestRouterEmbeddings(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -307,6 +349,15 @@ func TestRouterEmbeddings(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, out1, res)
 
+	reqAlias := &api.EmbeddingRequest{
+		Model:  "llama3",
+		Prompt: "Why is the sky blue?",
+	}
+	c1.On("Embeddings", ctx, req).Once().Return(out1, nil)
+	res, err = r.Embeddings(ctx, reqAlias)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out1, res)
+
 	req = &api.EmbeddingRequest{
 		Model:  "other_model",
 		Prompt: "Why is the sky blue?",
@@ -319,6 +370,15 @@ func TestRouterEmbeddings(t *testing.T) {
 	}
 	c2.On("Embeddings", ctx, req).Once().Return(out2, nil)
 	res, err = r.Embeddings(ctx, req)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out2, res)
+
+	reqAlias = &api.EmbeddingRequest{
+		Model:  "some_alias",
+		Prompt: "Why is the sky blue?",
+	}
+	c2.On("Embeddings", ctx, req).Once().Return(out2, nil)
+	res, err = r.Embeddings(ctx, reqAlias)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out2, res)
 
@@ -342,7 +402,7 @@ func TestRouterGenerate(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -360,11 +420,25 @@ func TestRouterGenerate(t *testing.T) {
 	err = r.Generate(ctx, req, cb)
 	assert.NoError(t, err)
 
+	reqAlias := &api.GenerateRequest{
+		Model: "llama3",
+	}
+	c1.On("Generate", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Generate(ctx, reqAlias, cb)
+	assert.NoError(t, err)
+
 	req = &api.GenerateRequest{
 		Model: "other_model",
 	}
 	c2.On("Generate", ctx, req, mock.Anything).Once().Return(nil)
 	err = r.Generate(ctx, req, cb)
+	assert.NoError(t, err)
+
+	reqAlias = &api.GenerateRequest{
+		Model: "some_alias",
+	}
+	c2.On("Generate", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Generate(ctx, reqAlias, cb)
 	assert.NoError(t, err)
 
 	c2.On("Generate", ctx, req, mock.Anything).Once().Return(errors.New("some error"))
@@ -382,7 +456,7 @@ func TestRouterHeartbeat(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -403,7 +477,7 @@ func TestRouterList(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -438,7 +512,7 @@ func TestRouterListRunning(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -475,7 +549,7 @@ func TestRouterPull(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -493,11 +567,25 @@ func TestRouterPull(t *testing.T) {
 	err = r.Pull(ctx, req, cb)
 	assert.NoError(t, err)
 
+	reqAlias := &api.PullRequest{
+		Model: "llama3",
+	}
+	c1.On("Pull", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Pull(ctx, reqAlias, cb)
+	assert.NoError(t, err)
+
 	req = &api.PullRequest{
-		Model: "other_model",
+		Name: "other_model",
 	}
 	c2.On("Pull", ctx, req, mock.Anything).Once().Return(nil)
 	err = r.Pull(ctx, req, cb)
+	assert.NoError(t, err)
+
+	reqAlias = &api.PullRequest{
+		Name: "some_alias",
+	}
+	c2.On("Pull", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Pull(ctx, reqAlias, cb)
 	assert.NoError(t, err)
 
 	c2.On("Pull", ctx, req, mock.Anything).Once().Return(errors.New("some error"))
@@ -545,7 +633,7 @@ func TestRouterShow(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -567,14 +655,30 @@ func TestRouterShow(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, out1, resp)
 
+	reqAlias := &api.ShowRequest{
+		Model: "llama3",
+	}
+	c1.On("Show", ctx, req, mock.Anything).Once().Return(out1, nil)
+	resp, err = r.Show(ctx, reqAlias)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out1, resp)
+
 	req = &api.ShowRequest{
-		Model: "other_model",
+		Name: "other_model",
 	}
 	out2 := &api.ShowResponse{
 		Modelfile: "other_model.file",
 	}
 	c2.On("Show", ctx, req, mock.Anything).Once().Return(out2, nil)
 	resp, err = r.Show(ctx, req)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out2, resp)
+
+	reqAlias = &api.ShowRequest{
+		Name: "some_alias",
+	}
+	c2.On("Show", ctx, req, mock.Anything).Once().Return(out2, nil)
+	resp, err = r.Show(ctx, reqAlias)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out2, resp)
 
@@ -594,7 +698,7 @@ func TestRouterVersion(t *testing.T) {
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	})
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
