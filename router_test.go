@@ -77,7 +77,7 @@ func TestRouterChat(t *testing.T) {
 	err = r.Chat(ctx, &api.ChatRequest{
 		Model: "unknown_model",
 	}, cb)
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 
 	req := &api.ChatRequest{
 		Model: "llama3.2",
@@ -225,7 +225,7 @@ func TestRouterEmbed(t *testing.T) {
 		Model: "unknown_model",
 		Input: "Why is the sky blue?",
 	})
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 	assert.Nil(t, res)
 
 	req := &api.EmbedRequest{
@@ -289,7 +289,7 @@ func TestRouterEmbeddings(t *testing.T) {
 		Model:  "unknown_model",
 		Prompt: "Why is the sky blue?",
 	})
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 	assert.Nil(t, res)
 
 	req := &api.EmbeddingRequest{
@@ -351,7 +351,7 @@ func TestRouterGenerate(t *testing.T) {
 	err = r.Generate(ctx, &api.GenerateRequest{
 		Model: "unknown_model",
 	}, cb)
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 
 	req := &api.GenerateRequest{
 		Model: "llama3.2",
@@ -484,7 +484,7 @@ func TestRouterPull(t *testing.T) {
 	err = r.Pull(ctx, &api.PullRequest{
 		Model: "unknown_model",
 	}, cb)
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 
 	req := &api.PullRequest{
 		Model: "llama3.2",
@@ -553,7 +553,7 @@ func TestRouterShow(t *testing.T) {
 	resp, err := r.Show(ctx, &api.ShowRequest{
 		Model: "unknown_model",
 	})
-	assert.EqualError(t, err, "gollamas router is missing a valid route to model")
+	assert.EqualError(t, err, "gollamas router is missing a valid route to model unknown_model:latest")
 	assert.Nil(t, resp)
 
 	req := &api.ShowRequest{

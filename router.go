@@ -250,7 +250,7 @@ func (r *Router) getClientByModel(ctx context.Context, m string) (IOllamaClient,
 	}
 	cl, ok := r.cmap[name.DisplayShortest()]
 	if !ok {
-		return nil, NewHttpError(http.StatusNotFound, "gollamas router is missing a valid route to model")
+		return nil, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", name.DisplayShortest())
 	}
 	return cl, nil
 }
