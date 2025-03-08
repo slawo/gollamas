@@ -150,7 +150,7 @@ func (r *Router) List(ctx context.Context) (*api.ListResponse, error) {
 			defer wg.Done()
 			v, err := cl.List(ctx)
 			if err != nil {
-				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve running models")
+				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve models.")
 			}
 			if v != nil {
 				v.Models = r.filterListToMapedModels(v.Models, id)
@@ -218,7 +218,7 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 			defer wg.Done()
 			v, err := cl.ListRunning(ctx)
 			if err != nil {
-				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve running models")
+				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve running models.")
 			}
 			ch <- &rsp{
 				v: v,
@@ -282,7 +282,7 @@ func (r *Router) Version(ctx context.Context) (string, error) {
 			defer wg.Done()
 			v, err := cl.Version(ctx)
 			if err != nil {
-				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve version")
+				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve version.")
 			}
 			ch <- v
 		}(id, v)
@@ -320,7 +320,7 @@ func (r *Router) setAliases(aliases map[string]string) error {
 }
 
 func (r *Router) getClientAndModelByModelName(m string) (IOllamaClient, string, error) {
-	log.WithField("model", m).Trace("Routing: request")
+	log.WithField("model", m).Trace("Routing: request.")
 	modelName := m
 	cl, ok := r.cmap[m]
 	if !ok {

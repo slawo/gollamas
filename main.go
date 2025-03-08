@@ -87,16 +87,17 @@ func initErrorLevel(e string) error {
 
 func initProxyConfig(ss []string) (map[string]ProxyConfig, error) {
 	res := map[string]ProxyConfig{}
+	log.WithField("strings", ss).Trace("Initialize proxy configuration.")
 	for _, s := range ss {
 		v := strings.SplitN(s, "=", 2)
 		if len(v) != 2 {
-			return nil, fmt.Errorf("invalid proxy string %s, %d", s, len(v))
+			return nil, fmt.Errorf("invalid proxy string: %s", s)
 		}
 		if v[0] == "" {
-			return nil, fmt.Errorf("invalid proxy model in %s", s)
+			return nil, fmt.Errorf("empty proxy model in %s", s)
 		}
 		if v[1] == "" {
-			return nil, fmt.Errorf("invalid proxy destination in %s", s)
+			return nil, fmt.Errorf("empty proxy destination in %s", s)
 		}
 
 		res[v[0]] = ProxyConfig{
@@ -108,7 +109,7 @@ func initProxyConfig(ss []string) (map[string]ProxyConfig, error) {
 
 func initAliasesMap(ss []string) (map[string]string, error) {
 	aliases := map[string]string{}
-	log.WithField("aliases", aliases).Trace("Initialize aliases")
+	log.WithField("aliases", aliases).Trace("Initialize aliases.")
 	for _, s := range ss {
 		v := strings.SplitN(s, "=", 2)
 		if len(v) != 2 {
@@ -129,8 +130,8 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	if err := initErrorLevel(cli.String("level")); err != nil {
 		return err
 	}
-	log.Tracef("starting")
-	defer log.Tracef("ending")
+	log.Tracef("Application is starting.")
+	defer log.Tracef("Application has ended.")
 
 	p := append([]string{}, cli.StringSlice("alias")...)
 	if cli.String("aliases") != "" {
