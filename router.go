@@ -365,11 +365,6 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOl
 			return nil, fmt.Errorf("invalid model name: %s", k)
 		}
 		cmap[name.DisplayShortest()] = client
-
-		version, err := client.Version(ctx)
-		if err == nil {
-			l.WithField("version", version).Tracef("Connected to server.")
-		}
 	}
 
 	return cmap, nil
