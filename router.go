@@ -136,9 +136,7 @@ func (r *Router) Heartbeat(ctx context.Context) error {
 	}()
 	var err error
 	for r := range ch {
-		if r.err != nil {
-			errors.Join(err, r.err)
-		}
+		errors.Join(err, r.err)
 	}
 	return err
 }
