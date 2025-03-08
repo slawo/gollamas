@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/slawo/gollamas/compare/v0.3.0...v0.3.1) (2025-03-08)
+
+
+### Bug Fixes
+
+* fixes long delay when a proxied server is unavailable ([81aca2f](https://github.com/slawo/gollamas/commit/81aca2f85e2db47313a67e70ee685c31b74f1e3d))
+* resolve an issue where some models are not reachable ([806af79](https://github.com/slawo/gollamas/commit/806af795bdaabc5a06e18312a5fe084a887eb930))
+
 ## [0.3.0](https://github.com/slawo/gollamas/compare/v0.2.4...v0.3.0) (2025-03-08)
 
 
