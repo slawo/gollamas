@@ -15,7 +15,7 @@ import (
 
 func handleStreamRequest[T any, R any, F ~func(R) error](c *gin.Context, fn func(context.Context, *T, F) error) {
 	var req T
-	if !bindRequest(c, &req) {
+	if !BindRequest(c, &req) {
 		return
 	}
 	ch := make(chan any)

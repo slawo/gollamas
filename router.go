@@ -21,10 +21,7 @@ type ProxyConfig struct {
 }
 
 // NewRouter creates a new router
-func NewRouter(ctx context.Context, cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, error) {
-	if ctx == nil {
-		return nil, errors.New("missing context")
-	}
+func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, error) {
 	if cmap == nil {
 		return nil, errors.New("missing ollama client map")
 	}
@@ -342,10 +339,7 @@ func (r *Router) getClientAndModelByModelName(m string) (IOllamaClient, string, 
 	return cl, modelName, nil
 }
 
-func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
-	if ctx == nil {
-		return nil, errors.New("missing context")
-	}
+func initClients(pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
 	if pc == nil {
 		return nil, errors.New("missing proxy config")
 	}
@@ -354,7 +348,6 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOl
 	}
 	cmap := map[string]IOllamaClient{}
 	for k, v := range pc {
-		l := log.WithField("server", v.Url)
 		remote, err := url.Parse(v.Url)
 		if err != nil {
 			return nil, err

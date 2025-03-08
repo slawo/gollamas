@@ -150,7 +150,7 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	return runGollamas(ctx, GollamasConfig{
+	return runGollamas(GollamasConfig{
 		Listen:  cli.String("listen"),
 		Proxies: pConf,
 		Aliases: aliases,
@@ -163,25 +163,29 @@ type GollamasConfig struct {
 	Aliases map[string]string
 }
 
-func runGollamas(ctx context.Context, cfg GollamasConfig) error {
-	cmap, err := initClients(ctx, cfg.Proxies)
+func InitService(cfg GollamasConfig) (*Service, error) {
+	cmap, err := initClients(cfg.Proxies)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ropts := initRouterAliasOpts(cfg.Aliases)
 
-	r, err := NewRouter(ctx, cmap, ropts...)
+	r, err := NewRouter(cmap, ropts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewService(r)
+}
+
+func runGollamas(cfg GollamasConfig) error {
+	s, err := InitService(cfg)
 	if err != nil {
 		return err
 	}
 
-	s, err := NewService(ctx, r)
-	if err != nil {
-		return err
-	}
-
-	rs := s.GenerateRoutes()
+	rs := GenerateRoutes(s)
 	addr := cfg.Listen
 
 	log.Printf("Starting server on %s", addr)

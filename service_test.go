@@ -14,17 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestNewServerFailsOnMissingContext(t *testing.T) {
-	r := mocks.NewIOllamaClient(t)
-	s, err := gollamas.NewService(nil, r)
-	r.AssertExpectations(t)
-
-	assert.EqualError(t, err, "missing context")
-	assert.Nil(t, s)
-}
-
 func TestNewServerFailsOnMissingRouter(t *testing.T) {
-	s, err := gollamas.NewService(context.TODO(), nil)
+	s, err := gollamas.NewService(nil)
 
 	assert.EqualError(t, err, "missing ollama client")
 	assert.Nil(t, s)
@@ -32,7 +23,7 @@ func TestNewServerFailsOnMissingRouter(t *testing.T) {
 
 func TestNewServerSuccess(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, err := gollamas.NewService(context.TODO(), r)
+	s, err := gollamas.NewService(r)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
@@ -41,8 +32,8 @@ func TestNewServerSuccess(t *testing.T) {
 
 func TestServerHome(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
@@ -56,8 +47,8 @@ func TestServerHome(t *testing.T) {
 
 func TestServerPOSTChatMissingRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := httptest.NewRecorder()
 	hreq, _ := http.NewRequest("POST", "/api/chat", nil)
@@ -83,8 +74,8 @@ func TestServerPOSTChatRequest(t *testing.T) {
       "content": "why is the sky blue?"
     }]}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	r.On("Chat", MockContext, mock.AnythingOfType("*api.ChatRequest"), mock.Anything).Run(func(args mock.Arguments) {
 		req := args.Get(1).(*api.ChatRequest)
@@ -124,8 +115,8 @@ func TestServerPOSTChatStreamRequest(t *testing.T) {
       "content": "why is the sky blue?"
     }]}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	r.On("Chat", MockContext, mock.AnythingOfType("*api.ChatRequest"), mock.Anything).Run(func(args mock.Arguments) {
 		req := args.Get(1).(*api.ChatRequest)
@@ -169,8 +160,8 @@ func TestServerPOSTChatStreamRequest(t *testing.T) {
 func TestServerPOSTCopyRequest(t *testing.T) {
 	jsonReq := []byte(`{"source": "llama3.2", "destination": "llama3-backup"}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("POST", "/api/copy", bytes.NewBuffer(jsonReq))
@@ -184,8 +175,8 @@ func TestServerPOSTCopyRequest(t *testing.T) {
 
 func TestServerPOSTCreateBlobRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("POST", "/api/blobs/some_blob", nil)
@@ -199,8 +190,8 @@ func TestServerPOSTCreateBlobRequest(t *testing.T) {
 
 func TestServerHEADCreateBlobRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("HEAD", "/api/blobs/some_blob", nil)
@@ -214,8 +205,8 @@ func TestServerHEADCreateBlobRequest(t *testing.T) {
 
 func TestServerPOSTCreateRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("POST", "/api/create", nil)
@@ -229,8 +220,8 @@ func TestServerPOSTCreateRequest(t *testing.T) {
 
 func TestServerDELETEDeleteRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("DELETE", "/api/delete", nil)
@@ -248,8 +239,8 @@ func TestServerPOSTEmbeddingsRequest(t *testing.T) {
   "prompt": "Here is an article about llamas..."
 }`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	ret := api.EmbeddingResponse{
 		Embedding: []float64{0.5670403838157654, 0.009260174818336964, 0.23178744316101074, -0.2916173040866852, -0.8924556970596313,
@@ -273,8 +264,8 @@ func TestServerPOSTEmbedRequest(t *testing.T) {
   "input": ["Why is the sky blue?", "Why is the grass green?"]
 }`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	ret := api.EmbedResponse{
 		Model: "all-minilm",
@@ -302,8 +293,8 @@ func TestServerPOSTGenerateRequest(t *testing.T) {
   "stream": false
 }`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	r.On("Generate", MockContext, mock.AnythingOfType("*api.GenerateRequest"), mock.Anything).Run(func(args mock.Arguments) {
 		req := args.Get(1).(*api.GenerateRequest)
@@ -336,8 +327,8 @@ func TestServerPOSTGenerateStreamRequest(t *testing.T) {
   "stream": true
 }`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	r.On("Generate", MockContext, mock.AnythingOfType("*api.GenerateRequest"), mock.Anything).Run(func(args mock.Arguments) {
 		req := args.Get(1).(*api.GenerateRequest)
@@ -372,8 +363,8 @@ func TestServerPOSTGenerateStreamRequest(t *testing.T) {
 
 func TestServerGETTagsRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	ret := api.ListResponse{
 		Models: []api.ListModelResponse{
@@ -398,8 +389,8 @@ func TestServerGETTagsRequest(t *testing.T) {
 
 func TestServerGETPsRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	ret := api.ProcessResponse{
 		Models: []api.ProcessModelResponse{
@@ -426,8 +417,8 @@ func TestServerGETPsRequest(t *testing.T) {
 func TestServerPOSTPullRequest(t *testing.T) {
 	jsonReq := []byte(`{"model": "llama3.2", "stream": false}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	//Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error
 	r.On("Pull", MockContext, mock.AnythingOfType("*api.PullRequest"), mock.Anything).Run(func(args mock.Arguments) {
@@ -454,8 +445,8 @@ func TestServerPOSTPullRequest(t *testing.T) {
 func TestServerPOSTPullStreamRequest(t *testing.T) {
 	jsonReq := []byte(`{"model": "llama3.2"}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	//Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error
 	r.On("Pull", MockContext, mock.AnythingOfType("*api.PullRequest"), mock.Anything).Run(func(args mock.Arguments) {
@@ -519,8 +510,8 @@ func TestServerPOSTPullStreamRequest(t *testing.T) {
 
 func TestServerPOSTPushRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	w := CreateTestResponseRecorder()
 	hreq, _ := http.NewRequest("POST", "/api/push", nil)
@@ -535,8 +526,8 @@ func TestServerPOSTPushRequest(t *testing.T) {
 func TestServerPOSTShowRequest(t *testing.T) {
 	jsonReq := []byte(`{"model": "llama3.2"}`)
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	ret := api.ShowResponse{
 		Modelfile: "llama3.2",
@@ -555,8 +546,8 @@ func TestServerPOSTShowRequest(t *testing.T) {
 
 func TestServerGETVersionRequest(t *testing.T) {
 	r := mocks.NewIOllamaClient(t)
-	s, _ := gollamas.NewService(context.TODO(), r)
-	sr := s.GenerateRoutes()
+	s, _ := gollamas.NewService(r)
+	sr := gollamas.GenerateRoutes(s)
 
 	r.On("Version", MockContext).Return("1.1.1", nil)
 

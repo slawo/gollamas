@@ -41,10 +41,7 @@ func (e *HttpError) StatusCode() int {
 
 // NewService instantiates a new instance of the [Service].
 // Hail to the llamas!
-func NewService(ctx context.Context, r IOllamaClient) (*Service, error) {
-	if ctx == nil {
-		return nil, errors.New("missing context")
-	}
+func NewService(r IOllamaClient) (*Service, error) {
 	if r == nil {
 		return nil, errors.New("missing ollama client")
 	}
@@ -74,57 +71,6 @@ type IOllamaClient interface {
 
 type Service struct {
 	r IOllamaClient
-}
-
-func (s *Service) GenerateRoutes() *gin.Engine {
-	config := cors.DefaultConfig()
-	config.AllowWildcard = true
-	config.AllowBrowserExtensions = true
-	config.AllowHeaders = []string{"Authorization", "Content-Type", "User-Agent", "Accept", "X-Requested-With"}
-	openAIProperties := []string{"lang", "package-version", "os", "arch", "retry-count", "runtime", "runtime-version", "async", "helper-method", "poll-helper", "custom-poll-interval"}
-	for _, prop := range openAIProperties {
-		config.AllowHeaders = append(config.AllowHeaders, "x-stainless-"+prop)
-	}
-	config.AllowOrigins = envconfig.Origins()
-
-	r := gin.Default()
-	r.Use(
-		cors.New(config),
-	)
-
-	// refer to https://github.com/ollama/ollama/blob/0667baddc658d3f556a369701819e7695477f59a/server/routes.go#L1146
-	// for the routes and setup in this file
-	r.DELETE("/api/delete", s.DeleteHandler)
-
-	r.GET("/", s.HomeHandler)
-	r.GET("/api/ps", s.PsHandler)
-	r.GET("/api/tags", s.ListHandler)
-	r.GET("/api/version", s.VersionHandler)
-	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
-	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
-
-	r.HEAD("/", s.HomeHandler)
-	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
-	r.HEAD("/v1/models", openai.ListMiddleware(), s.ListHandler)
-	r.HEAD("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
-
-	r.POST("/api/chat", s.ChatHandler)
-	r.POST("/api/copy", s.CopyHandler)
-	r.POST("/api/create", s.CreateHandler)
-	r.POST("/api/generate", s.GenerateHandler)
-	r.POST("/api/embed", s.EmbedHandler)
-	r.POST("/api/embeddings", s.EmbeddingsHandler)
-	r.POST("/api/pull", s.PullHandler)
-	r.POST("/api/push", s.PushHandler)
-	r.POST("/api/show", s.ShowHandler)
-	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
-
-	// Compatibility endpoints
-	r.POST("/v1/chat/completions", openai.ChatMiddleware(), s.ChatHandler)
-	r.POST("/v1/completions", openai.CompletionsMiddleware(), s.GenerateHandler)
-	r.POST("/v1/embeddings", openai.EmbeddingsMiddleware(), s.EmbedHandler)
-
-	return r
 }
 
 func (s *Service) HomeHandler(c *gin.Context) {
@@ -191,7 +137,7 @@ func (s *Service) VersionHandler(c *gin.Context) {
 	handle(c, s.r.Version)
 }
 
-func bindRequest(c *gin.Context, req any) bool {
+func BindRequest(c *gin.Context, req any) bool {
 	if err := c.ShouldBindJSON(req); errors.Is(err, io.EOF) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing request body"})
 		return false
@@ -213,7 +159,7 @@ func handle[R any](c *gin.Context, fn func(context.Context) (R, error)) {
 
 func handleRequest[T any, R any](c *gin.Context, fn func(context.Context, *T) (R, error)) {
 	var req T
-	if !bindRequest(c, &req) {
+	if !BindRequest(c, &req) {
 		return
 	}
 	resp, err := fn(c.Request.Context(), &req)
@@ -222,4 +168,75 @@ func handleRequest[T any, R any](c *gin.Context, fn func(context.Context, *T) (R
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+//go:generate mockery --name IGinService --output mocks
+type IGinService interface {
+	ChatHandler(c *gin.Context)
+	CopyHandler(c *gin.Context)
+	CreateBlobHandler(c *gin.Context)
+	CreateHandler(c *gin.Context)
+	DeleteHandler(c *gin.Context)
+	EmbeddingsHandler(c *gin.Context)
+	EmbedHandler(c *gin.Context)
+	GenerateHandler(c *gin.Context)
+	HeadBlobHandler(c *gin.Context)
+	HomeHandler(c *gin.Context)
+	ListHandler(c *gin.Context)
+	PsHandler(c *gin.Context)
+	PullHandler(c *gin.Context)
+	PushHandler(c *gin.Context)
+	ShowHandler(c *gin.Context)
+	VersionHandler(c *gin.Context)
+}
+
+func GenerateRoutes(s IGinService) *gin.Engine {
+	config := cors.DefaultConfig()
+	config.AllowWildcard = true
+	config.AllowBrowserExtensions = true
+	config.AllowHeaders = []string{"Authorization", "Content-Type", "User-Agent", "Accept", "X-Requested-With"}
+	openAIProperties := []string{"lang", "package-version", "os", "arch", "retry-count", "runtime", "runtime-version", "async", "helper-method", "poll-helper", "custom-poll-interval"}
+	for _, prop := range openAIProperties {
+		config.AllowHeaders = append(config.AllowHeaders, "x-stainless-"+prop)
+	}
+	config.AllowOrigins = envconfig.Origins()
+
+	r := gin.Default()
+	r.Use(
+		cors.New(config),
+	)
+
+	// refer to https://github.com/ollama/ollama/blob/0667baddc658d3f556a369701819e7695477f59a/server/routes.go#L1146
+	// for the routes and setup in this file
+	r.DELETE("/api/delete", s.DeleteHandler)
+
+	r.GET("/", s.HomeHandler)
+	r.GET("/api/ps", s.PsHandler)
+	r.GET("/api/tags", s.ListHandler)
+	r.GET("/api/version", s.VersionHandler)
+	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
+	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
+
+	r.HEAD("/", s.HomeHandler)
+	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
+	r.HEAD("/v1/models", openai.ListMiddleware(), s.ListHandler)
+	r.HEAD("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
+
+	r.POST("/api/chat", s.ChatHandler)
+	r.POST("/api/copy", s.CopyHandler)
+	r.POST("/api/create", s.CreateHandler)
+	r.POST("/api/generate", s.GenerateHandler)
+	r.POST("/api/embed", s.EmbedHandler)
+	r.POST("/api/embeddings", s.EmbeddingsHandler)
+	r.POST("/api/pull", s.PullHandler)
+	r.POST("/api/push", s.PushHandler)
+	r.POST("/api/show", s.ShowHandler)
+	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
+
+	// Compatibility endpoints
+	r.POST("/v1/chat/completions", openai.ChatMiddleware(), s.ChatHandler)
+	r.POST("/v1/completions", openai.CompletionsMiddleware(), s.GenerateHandler)
+	r.POST("/v1/embeddings", openai.EmbeddingsMiddleware(), s.EmbedHandler)
+
+	return r
 }

@@ -14,31 +14,21 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestNewRouterFailsOnMissingContext(t *testing.T) {
-	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(nil, map[string]gollamas.IOllamaClient{
-		"llama3.2": c1,
-	})
-	assert.EqualError(t, err, "missing context")
-	assert.Nil(t, r)
-	c1.AssertExpectations(t)
-}
-
 func TestNewRouterFailsOnMissingConfig(t *testing.T) {
-	r, err := gollamas.NewRouter(context.TODO(), nil)
+	r, err := gollamas.NewRouter(nil)
 	assert.EqualError(t, err, "missing ollama client map")
 	assert.Nil(t, r)
 }
 
 func TestNewRouterFailsOnEmptyConfig(t *testing.T) {
-	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{})
+	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{})
 	assert.EqualError(t, err, "empty ollama client map")
 	assert.Nil(t, r)
 }
 
 func TestNewRouterFailsOnNilClient(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{
+	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": nil,
 	})
@@ -48,7 +38,7 @@ func TestNewRouterFailsOnNilClient(t *testing.T) {
 
 func TestNewRouterFailOnInvalidAlias(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{
+	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2": c1,
 	}, gollamas.WithAlias("llama3", "wrong_model"))
 	assert.EqualError(t, err, "alias llama3 points to unknown model wrong_model")
@@ -58,7 +48,7 @@ func TestNewRouterFailOnInvalidAlias(t *testing.T) {
 
 func TestNewRouter(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(context.TODO(), map[string]gollamas.IOllamaClient{
+	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2": c1,
 	}, gollamas.WithAlias("llama3", "llama3.2"))
 	assert.NoError(t, err)
@@ -68,7 +58,7 @@ func TestNewRouter(t *testing.T) {
 
 func newRouter(cmap map[string]gollamas.IOllamaClient, opts ...gollamas.RouterOption) (context.Context, context.CancelFunc, *gollamas.Router, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	r, err := gollamas.NewRouter(ctx, cmap, opts...)
+	r, err := gollamas.NewRouter(cmap, opts...)
 	return ctx, cancel, r, err
 }
 
