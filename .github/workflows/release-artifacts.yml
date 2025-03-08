@@ -185,7 +185,6 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         annotations: ${{ steps.meta.outputs.annotations }}
         labels: ${{ steps.meta.outputs.labels }}
-        buildargs: VERSION COMMIT_SHA RELEASE_DATE
         context: .
 
     - name: Generate artifact attestation for docker hub
