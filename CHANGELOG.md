@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/slawo/gollamas/compare/v0.2.4...v0.3.0) (2025-03-08)
+
+
+### Features
+
+* add support for model aliases ([99778b9](https://github.com/slawo/gollamas/commit/99778b9a983e206c8931b00252c10e07b6ffb4e8)), closes [#9](https://github.com/slawo/gollamas/issues/9)
+* models not configured on the proxy are filtered out ([f71a9e7](https://github.com/slawo/gollamas/commit/f71a9e71848c2658d909d0090de173bda9a4df69))
+
+
+### Bug Fixes
+
+* invalid proxy string when proxies is empty ([188d0ae](https://github.com/slawo/gollamas/commit/188d0ae0512caf8f8bb83acb86042fde3c6880f6))
+
 ## [0.2.4](https://github.com/slawo/gollamas/compare/v0.2.3...v0.2.4) (2025-03-06)
 
 
