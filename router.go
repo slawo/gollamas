@@ -364,7 +364,7 @@ func initClients(ctx context.Context, pc map[string]ProxyConfig) (map[string]IOl
 		if !name.IsValid() {
 			return nil, fmt.Errorf("invalid model name: %s", k)
 		}
-		cmap[name.DisplayShortest()] = client
+		cmap[k] = client
 	}
 
 	return cmap, nil
