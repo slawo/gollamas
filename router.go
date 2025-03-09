@@ -48,7 +48,7 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 	r := &Router{
 		cmap: clids,
 	}
-	if err := r.setAliases(opt.aliases); err != nil {
+	if err := r.setAliases(opt.Aliases); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -56,8 +56,8 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 
 // Router is a router that routes requests to the appropriate client
 type Router struct {
-	aliases map[string]string
-	cmap    map[string]IOllamaClient
+	alias2model map[string]string
+	cmap        map[string]IOllamaClient
 }
 
 func (r *Router) Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResponseFunc) error {
@@ -301,8 +301,8 @@ func (r *Router) setAliases(aliases map[string]string) error {
 	if len(aliases) == 0 {
 		return nil
 	}
-	if r.aliases == nil {
-		r.aliases = map[string]string{}
+	if r.alias2model == nil {
+		r.alias2model = map[string]string{}
 	}
 	for k, v := range aliases {
 		if _, ok := r.cmap[v]; !ok {
@@ -311,7 +311,7 @@ func (r *Router) setAliases(aliases map[string]string) error {
 		if _, ok := r.cmap[k]; ok {
 			return fmt.Errorf("alias %s refers to an existing concrete model name", k)
 		}
-		r.aliases[k] = v
+		r.alias2model[k] = v
 	}
 	return nil
 }
@@ -322,7 +322,7 @@ func (r *Router) getClientAndModelByModelName(m string) (IOllamaClient, string, 
 	cl, ok := r.cmap[m]
 	if !ok {
 		log.WithField("model", m).Trace("Routing: no direct route to model.")
-		if alias, ok := r.aliases[m]; ok {
+		if alias, ok := r.alias2model[m]; ok {
 			log.WithField("model_alias", alias).WithField("model", m).Trace("Routing: no direct route to model.")
 			modelName = alias
 			cl = r.cmap[modelName]
@@ -365,6 +365,6 @@ func initClients(pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {
 
 func initRouterAliasOpts(aliases map[string]string) []RouterOption {
 	return []RouterOption{&RouterOptions{
-		aliases: aliases,
+		Aliases: aliases,
 	}}
 }
