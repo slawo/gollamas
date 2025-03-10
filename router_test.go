@@ -479,6 +479,17 @@ func TestRouterListNoExposeAliases(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 
+	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2:latest", Name: "llama3.2:latest", ModifiedAt: time.UnixMilli(123456789)}}}, nil)
+	c2.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "other_model:latest", Name: "other_model:latest", ModifiedAt: time.UnixMilli(23456789)}}}, nil)
+
+	out0 := &api.ListResponse{Models: []api.ListModelResponse{
+		{Model: "llama3.2:latest", Name: "llama3.2:latest", ModifiedAt: time.UnixMilli(123456789)},
+		{Model: "other_model:latest", Name: "other_model:latest", ModifiedAt: time.UnixMilli(23456789)},
+	}}
+	resp, err := r.List(ctx)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out0, resp)
+
 	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)}}}, nil)
 	c2.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)}}}, nil)
 
@@ -486,7 +497,7 @@ func TestRouterListNoExposeAliases(t *testing.T) {
 		{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)},
 		{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)},
 	}}
-	resp, err := r.List(ctx)
+	resp, err = r.List(ctx)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out1, resp)
 
