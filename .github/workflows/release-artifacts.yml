@@ -186,18 +186,3 @@ jobs:
         annotations: ${{ steps.meta.outputs.annotations }}
         labels: ${{ steps.meta.outputs.labels }}
         context: .
-
-    - name: Generate artifact attestation for docker hub
-      uses: actions/attest-build-provenance@v2
-      with:
-        subject-name: index.docker.io/${{ vars.DOCKERHUB_USERNAME }}/gollamas
-        subject-digest: ${{ steps.docker_build.outputs.digest }}
-        push-to-registry: true
-
-    - name: Generate artifact attestation for ghcr.io
-      uses: actions/attest-build-provenance@v2
-      id: attest
-      with:
-        subject-name: ghcr.io/${{ github.repository }}
-        subject-digest: ${{ steps.docker_build.outputs.digest }}
-        push-to-registry: true
