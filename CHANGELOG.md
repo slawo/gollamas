@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/slawo/gollamas/compare/v0.3.1...v0.4.0) (2025-03-10)
+
+
+### Features
+
+* returns aliases in the list when listing models ([5aa03c2](https://github.com/slawo/gollamas/commit/5aa03c2ef41f04b29a0e22c47036204e6fdc1d23))
+
+
+### Bug Fixes
+
+* some models returned by list cannot be reached in other requests ([8f5bd27](https://github.com/slawo/gollamas/commit/8f5bd27d9bd086bbfb56399c8451fd4f87a619da))
+
 ## [0.3.1](https://github.com/slawo/gollamas/compare/v0.3.0...v0.3.1) (2025-03-08)
 
 
