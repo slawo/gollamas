@@ -94,6 +94,13 @@ func TestRouterChat(t *testing.T) {
 	assert.NoError(t, err)
 
 	req = &api.ChatRequest{
+		Model: "llama3.2:latest",
+	}
+	c1.On("Chat", ctx, req, mock.Anything).Once().Return(nil)
+	err = r.Chat(ctx, req, cb)
+	assert.NoError(t, err)
+
+	req = &api.ChatRequest{
 		Model: "other_model",
 	}
 	c2.On("Chat", ctx, req, mock.Anything).Once().Return(nil)

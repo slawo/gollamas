@@ -40,6 +40,7 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 		}
 		clids[id] = cl
 		all2ModelID[id] = id
+		all2ModelID[name.DisplayShortest()] = id
 	}
 	opt := RouterOptions{ExposeAliases: true}
 	for _, o := range opts {
