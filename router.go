@@ -29,6 +29,7 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 		return nil, errors.New("empty ollama client map")
 	}
 	clids := make(map[string]IOllamaClient, len(cmap))
+	all2ModelID := map[string]string{}
 	for id, cl := range cmap {
 		if cl == nil {
 			return nil, fmt.Errorf("nil client for model %s", id)
@@ -38,15 +39,18 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 			return nil, fmt.Errorf("invalid model name: %s", id)
 		}
 		clids[id] = cl
+		all2ModelID[id] = id
 	}
-	opt := RouterOptions{}
+	opt := RouterOptions{ExposeAliases: true}
 	for _, o := range opts {
 		if err := o.ApplyTo(&opt); err != nil {
 			return nil, err
 		}
 	}
 	r := &Router{
-		cmap: clids,
+		cmap:          clids,
+		all2ModelID:   all2ModelID,
+		exposeAliases: opt.ExposeAliases,
 	}
 	if err := r.setAliases(opt.Aliases); err != nil {
 		return nil, err
@@ -56,8 +60,11 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 
 // Router is a router that routes requests to the appropriate client
 type Router struct {
-	alias2model map[string]string
-	cmap        map[string]IOllamaClient
+	exposeAliases bool
+	alias2model   map[string]string
+	model2aliases map[string][]string
+	cmap          map[string]IOllamaClient
+	all2ModelID   map[string]string // this is a temporary map of all possible names with the id of the connection
 }
 
 func (r *Router) Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResponseFunc) error {
@@ -178,25 +185,28 @@ func (r *Router) filterListToMapedModels(orig []api.ListModelResponse, ids ...st
 		idsmap[id] = id
 		name := model.ParseName(id)
 		idsmap[name.DisplayShortest()] = id
-		idsmap[name.String()] = id
 	}
+	log.WithField("ids_map", idsmap).Trace("filterListToMapedModels.")
 	var res []api.ListModelResponse
 	for _, m := range orig {
+		// both name and model are name.DisplayShortest() in the ollama api we use model for consistency
 		log.WithField("name", m.Name).WithField("model", m.Model).Trace("Filtering model.")
 		if id, ok := idsmap[m.Model]; ok {
-			m.Model = id
 			res = append(res, m)
-		} else {
-			name := model.ParseName(m.Model)
-			if id, ok := idsmap[name.DisplayShortest()]; ok {
-				m.Model = id
-				res = append(res, m)
-			} else if id, ok := idsmap[name.String()]; ok {
-				m.Model = id
-				res = append(res, m)
-			} else {
-				log.WithField("name", m.Name).WithField("model", m.Model).Trace("Model has been filtered out of response.")
+			if r.exposeAliases && len(r.model2aliases[id]) > 0 {
+				for _, alias := range r.model2aliases[id] {
+					res = append(res, api.ListModelResponse{
+						Name:       alias,
+						Model:      alias,
+						ModifiedAt: m.ModifiedAt,
+						Size:       m.Size,
+						Digest:     m.Digest,
+						Details:    m.Details,
+					})
+				}
 			}
+		} else {
+			log.WithField("name", m.Name).WithField("model", m.Model).Trace("Model has been filtered out of response.")
 		}
 	}
 	return res
@@ -216,6 +226,9 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 			v, err := cl.ListRunning(ctx)
 			if err != nil {
 				log.WithField("id", id).WithError(err).Errorf("Failed to retrieve running models.")
+			}
+			if v != nil {
+				v.Models = r.filterRunningListToMapedModels(v.Models, id)
 			}
 			ch <- &rsp{
 				v: v,
@@ -238,6 +251,39 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 		return -1 * cmp.Compare(j.Name, i.Name)
 	})
 	return &res, nil
+}
+
+func (r *Router) filterRunningListToMapedModels(orig []api.ProcessModelResponse, ids ...string) []api.ProcessModelResponse {
+	idsmap := map[string]string{}
+	for _, id := range ids {
+		idsmap[id] = id
+		name := model.ParseName(id)
+		idsmap[name.DisplayShortest()] = id
+	}
+	log.WithField("ids_map", idsmap).Trace("filterRunningListToMapedModels.")
+	var res []api.ProcessModelResponse
+	for _, m := range orig {
+		log.WithField("name", m.Name).WithField("model", m.Model).Trace("Filtering model.")
+		if id, ok := idsmap[m.Model]; ok {
+			res = append(res, m)
+			if r.exposeAliases && len(r.model2aliases[id]) > 0 {
+				for _, alias := range r.model2aliases[id] {
+					res = append(res, api.ProcessModelResponse{
+						Name:      alias,
+						Model:     alias,
+						Size:      m.Size,
+						Digest:    m.Digest,
+						Details:   m.Details,
+						ExpiresAt: m.ExpiresAt,
+						SizeVRAM:  m.SizeVRAM,
+					})
+				}
+			}
+		} else {
+			log.WithField("name", m.Name).WithField("model", m.Model).Trace("Model has been filtered out of response.")
+		}
+	}
+	return res
 }
 
 func (r *Router) Pull(ctx context.Context, req *api.PullRequest, fn api.PullProgressFunc) error {
@@ -304,39 +350,50 @@ func (r *Router) setAliases(aliases map[string]string) error {
 	if r.alias2model == nil {
 		r.alias2model = map[string]string{}
 	}
+	if r.model2aliases == nil {
+		r.model2aliases = map[string][]string{}
+	}
 	for k, v := range aliases {
-		if _, ok := r.cmap[v]; !ok {
-			return fmt.Errorf("alias %s points to unknown model %s", k, v)
+		if err := r.addAlias(k, v); err != nil {
+			return err
 		}
-		if _, ok := r.cmap[k]; ok {
-			return fmt.Errorf("alias %s refers to an existing concrete model name", k)
-		}
-		r.alias2model[k] = v
 	}
 	return nil
 }
 
-func (r *Router) getClientAndModelByModelName(m string) (IOllamaClient, string, error) {
-	log.WithField("model", m).Trace("Routing: request.")
-	modelName := m
-	cl, ok := r.cmap[m]
+func (r *Router) addAlias(alias, model string) error {
+	if _, ok := r.cmap[model]; !ok {
+		return fmt.Errorf("alias %s points to unknown model %s", alias, model)
+	}
+	if _, ok := r.cmap[alias]; ok {
+		return fmt.Errorf("alias %s refers to an existing concrete model name", alias)
+	}
+	r.alias2model[alias] = model
+	r.model2aliases[model] = append(r.model2aliases[model], alias)
+	return nil
+}
+
+func (r *Router) getClientAndModelByModelName(requested string) (IOllamaClient, string, error) {
+	log.WithField("requested_model", requested).Trace("Routing: request.")
+	modelID, ok := r.all2ModelID[requested]
 	if !ok {
-		log.WithField("model", m).Trace("Routing: no direct route to model.")
-		if alias, ok := r.alias2model[m]; ok {
-			log.WithField("model_alias", alias).WithField("model", m).Trace("Routing: no direct route to model.")
-			modelName = alias
-			cl = r.cmap[modelName]
+		log.WithField("requested_model", requested).Trace("Routing: no direct route to model.")
+		if alias, ok := r.alias2model[requested]; ok {
+			log.WithField("modelID", alias).WithField("requested_model", requested).Trace("Routing: selected model.")
+			modelID = alias
+		} else {
+			log.WithField("requested_model", requested).Trace("Routing: no route to model.")
 		}
 	}
-
+	cl := r.cmap[modelID]
 	if cl == nil {
-		if modelName != m {
-			return nil, m, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s (%s)", modelName, m)
+		if modelID != "" && modelID != requested {
+			return nil, requested, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s (%s)", requested, modelID)
 		}
-		return nil, m, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", modelName)
+		return nil, requested, NewHttpErrorf(http.StatusNotFound, "gollamas router is missing a valid route to model %s", requested)
 	}
 
-	return cl, modelName, nil
+	return cl, modelID, nil
 }
 
 func initClients(pc map[string]ProxyConfig) (map[string]IOllamaClient, error) {

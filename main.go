@@ -62,6 +62,10 @@ func main() {
 				Usage:   `sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b'`,
 				Sources: cli.EnvVars("GOLLAMAS_ALIASES", "ALIASES"),
 			},
+			&cli.BoolFlag{
+				Name:  "list-aliases",
+				Usage: `exposes aliases in the router`,
+			},
 		},
 		Commands: []*cli.Command{
 			getVersionCommand(),
@@ -147,16 +151,18 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 		return err
 	}
 	return runGollamas(GollamasConfig{
-		Listen:  cli.String("listen"),
-		Proxies: pConf,
-		Aliases: aliases,
+		Listen:      cli.String("listen"),
+		Proxies:     pConf,
+		Aliases:     aliases,
+		ListAliases: cli.Bool("list-aliases"),
 	})
 }
 
 type GollamasConfig struct {
-	Listen  string
-	Proxies map[string]ProxyConfig
-	Aliases map[string]string
+	Listen      string
+	Proxies     map[string]ProxyConfig
+	Aliases     map[string]string
+	ListAliases bool
 }
 
 func InitService(cfg GollamasConfig) (*Service, error) {
@@ -166,6 +172,7 @@ func InitService(cfg GollamasConfig) (*Service, error) {
 	}
 
 	ropts := initRouterAliasOpts(cfg.Aliases)
+	ropts = append(ropts, WithExposeAliases(cfg.ListAliases))
 
 	r, err := NewRouter(cmap, ropts...)
 	if err != nil {

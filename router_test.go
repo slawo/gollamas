@@ -461,6 +461,42 @@ func TestRouterHeartbeat(t *testing.T) {
 }
 
 // List(ctx context.Context) (*api.ListResponse, error)
+func TestRouterListNoExposeAliases(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	c2 := mocks.NewIOllamaClient(t)
+	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
+		"llama3.2":    c1,
+		"other_model": c2,
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false))
+	defer cancel()
+	assert.NoError(t, err)
+	assert.NotNil(t, r)
+
+	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)}}}, nil)
+	c2.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)}}}, nil)
+
+	out1 := &api.ListResponse{Models: []api.ListModelResponse{
+		{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)},
+		{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)},
+	}}
+	resp, err := r.List(ctx)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out1, resp)
+
+	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", Name: "llama3.2"}}}, nil)
+	c2.On("List", ctx).Once().Return(nil, errors.New("some error"))
+
+	out2 := &api.ListResponse{Models: []api.ListModelResponse{
+		{Model: "llama3.2", Name: "llama3.2"},
+	}}
+	resp, err = r.List(ctx)
+	assert.NoError(t, err)
+	assert.EqualValues(t, out2, resp)
+
+	c1.AssertExpectations(t)
+	c2.AssertExpectations(t)
+}
+
 func TestRouterList(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
@@ -472,21 +508,26 @@ func TestRouterList(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 
-	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", ModifiedAt: time.UnixMilli(123456789)}}}, nil)
-	c2.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "other_model", ModifiedAt: time.UnixMilli(23456789)}}}, nil)
+	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)}}}, nil)
+	c2.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)}}}, nil)
 
 	out1 := &api.ListResponse{Models: []api.ListModelResponse{
-		{Model: "llama3.2", ModifiedAt: time.UnixMilli(123456789)},
-		{Model: "other_model", ModifiedAt: time.UnixMilli(23456789)},
+		{Model: "llama3.2", Name: "llama3.2", ModifiedAt: time.UnixMilli(123456789)},
+		{Model: "llama3", Name: "llama3", ModifiedAt: time.UnixMilli(123456789)},
+		{Model: "other_model", Name: "other_model", ModifiedAt: time.UnixMilli(23456789)},
+		{Model: "some_alias", Name: "some_alias", ModifiedAt: time.UnixMilli(23456789)},
 	}}
 	resp, err := r.List(ctx)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out1, resp)
 
-	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2"}}}, nil)
+	c1.On("List", ctx).Once().Return(&api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2", Name: "llama3.2"}}}, nil)
 	c2.On("List", ctx).Once().Return(nil, errors.New("some error"))
 
-	out2 := &api.ListResponse{Models: []api.ListModelResponse{{Model: "llama3.2"}}}
+	out2 := &api.ListResponse{Models: []api.ListModelResponse{
+		{Model: "llama3.2", Name: "llama3.2"},
+		{Model: "llama3", Name: "llama3"},
+	}}
 	resp, err = r.List(ctx)
 	assert.NoError(t, err)
 	assert.EqualValues(t, out2, resp)
@@ -496,13 +537,13 @@ func TestRouterList(t *testing.T) {
 }
 
 // ListRunning(ctx context.Context) (*api.ProcessResponse, error)
-func TestRouterListRunning(t *testing.T) {
+func TestRouterListRunningNoExposeAliases(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
 	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
 		"llama3.2":    c1,
 		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false))
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -523,6 +564,47 @@ func TestRouterListRunning(t *testing.T) {
 	c2.On("ListRunning", ctx).Once().Return(nil, errors.New("some error"))
 
 	out2 := &api.ProcessResponse{Models: []api.ProcessModelResponse{{Model: "llama3.2"}}}
+	resp, err = r.ListRunning(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.ElementsMatch(t, out2.Models, resp.Models)
+
+	c1.AssertExpectations(t)
+	c2.AssertExpectations(t)
+}
+
+func TestRouterListRunning(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	c2 := mocks.NewIOllamaClient(t)
+	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
+		"llama3.2":    c1,
+		"other_model": c2,
+	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	defer cancel()
+	assert.NoError(t, err)
+	assert.NotNil(t, r)
+
+	c1.On("ListRunning", ctx).Once().Return(&api.ProcessResponse{Models: []api.ProcessModelResponse{{Model: "llama3.2", Name: "llama3.2"}}}, nil)
+	c2.On("ListRunning", ctx).Once().Return(&api.ProcessResponse{Models: []api.ProcessModelResponse{{Model: "other_model", Name: "other_model"}}}, nil)
+
+	out1 := &api.ProcessResponse{Models: []api.ProcessModelResponse{
+		{Model: "llama3.2", Name: "llama3.2"},
+		{Model: "llama3", Name: "llama3"},
+		{Model: "other_model", Name: "other_model"},
+		{Model: "some_alias", Name: "some_alias"},
+	}}
+	resp, err := r.ListRunning(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.ElementsMatch(t, out1.Models, resp.Models)
+
+	c1.On("ListRunning", ctx).Once().Return(&api.ProcessResponse{Models: []api.ProcessModelResponse{{Model: "llama3.2", Name: "llama3.2"}}}, nil)
+	c2.On("ListRunning", ctx).Once().Return(nil, errors.New("some error"))
+
+	out2 := &api.ProcessResponse{Models: []api.ProcessModelResponse{
+		{Model: "llama3.2", Name: "llama3.2"},
+		{Model: "llama3", Name: "llama3"},
+	}}
 	resp, err = r.ListRunning(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)

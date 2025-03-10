@@ -5,10 +5,12 @@ type RouterOption interface {
 }
 
 type RouterOptions struct {
-	Aliases map[string]string
+	ExposeAliases bool
+	Aliases       map[string]string
 }
 
 func (o *RouterOptions) ApplyTo(opts *RouterOptions) error {
+	opts.ExposeAliases = o.ExposeAliases
 	applyOptionAliasConfig(opts, o.Aliases)
 	return nil
 }
@@ -32,6 +34,13 @@ func WithAlias(alias, model string) RouterOptionFunc {
 			opts.Aliases = map[string]string{}
 		}
 		opts.Aliases[alias] = model
+		return nil
+	}
+}
+
+func WithExposeAliases(expose bool) RouterOptionFunc {
+	return func(opts *RouterOptions) error {
+		opts.ExposeAliases = expose
 		return nil
 	}
 }
