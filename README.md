@@ -1,5 +1,5 @@
 # gollamas
-A "reverse proxy" for multiple ollama servers running various models.
+A per model "reverse proxy" which redirects requests to multiple ollama servers.
 
 [![Latest Stable Version](https://flat.badgen.net/github/release/slawo/gollamas/stable)](https://github.com/slawo/gollamas/releases/latest)
 [![Licence](https://flat.badgen.net/github/license/slawo/gollamas)](https://github.com/slawo/gollamas/blob/main/LICENSE)
@@ -77,4 +77,4 @@ Not all endpoints are covered, particularly endpoints which deal with customisat
 The server relies on existing ollama models and middlewares to speed up the development of the initial implementation.
 Only the requests which have a `model` ( or the deprecated `name`) field are transfered to the right server.
 
-Other endpoints hit all servers to either select one answer ie the lowest `version` available, or combined into oone response.
+When possible other endpoints hit all configured servers to either select one answer (ie: the lowest `version` available), or are combined into oone response (ie: lists of models).
