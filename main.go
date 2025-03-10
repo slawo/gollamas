@@ -45,26 +45,22 @@ func main() {
 				Sources: cli.EnvVars("GOLLAMAS_LEVEL", "LEVEL"),
 			},
 			&cli.StringSliceFlag{
-				Name:      "proxy",
-				Usage:     `defines a proxy for a given model ex: --proxy 'llama3.2-vision=http://server:11434'`,
-				Validator: validateProxies,
+				Name:  "proxy",
+				Usage: `defines a proxy for a given model ex: --proxy 'llama3.2-vision=http://server:11434'`,
 			},
 			&cli.StringFlag{
-				Name:      "proxies",
-				Validator: validateCSProxies,
-				Usage:     `defines a list of proxies per model given model ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
-				Sources:   cli.EnvVars("GOLLAMAS_PROXIES", "PROXIES"),
+				Name:    "proxies",
+				Usage:   `defines a list of proxies per model given model ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
+				Sources: cli.EnvVars("GOLLAMAS_PROXIES", "PROXIES"),
 			},
 			&cli.StringSliceFlag{
-				Name:      "alias",
-				Usage:     `assigns an alias from an existing model name passed in the proxy configuration 'alias=concrete_model' ex: --alias gpt-3.5-turbo=llama3.2`,
-				Validator: validateProxies,
+				Name:  "alias",
+				Usage: `assigns an alias from an existing model name passed in the proxy configuration 'alias=concrete_model' ex: --alias gpt-3.5-turbo=llama3.2`,
 			},
 			&cli.StringFlag{
-				Name:      "aliases",
-				Validator: validateCSProxies,
-				Usage:     `sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b'`,
-				Sources:   cli.EnvVars("GOLLAMAS_ALIASES", "ALIASES"),
+				Name:    "aliases",
+				Usage:   `sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b'`,
+				Sources: cli.EnvVars("GOLLAMAS_ALIASES", "ALIASES"),
 			},
 		},
 		Commands: []*cli.Command{
@@ -190,15 +186,4 @@ func runGollamas(cfg GollamasConfig) error {
 
 	log.Printf("Starting server on %s", addr)
 	return http.ListenAndServe(addr, rs)
-}
-
-func validateProxies(s []string) error {
-	_, err := initProxyConfig(s)
-	return err
-}
-
-func validateCSProxies(csl string) error {
-	s := strings.Split(csl, ",")
-	_, err := initProxyConfig(s)
-	return err
 }
