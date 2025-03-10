@@ -21,10 +21,10 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
   - [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas): `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" slawoc/gollamas:latest`
   - [ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas) : `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" ghcr.io/slawo/gollamas:latest`
 
-# Features {#features}
+# Features
 There are various scenarios this projects attempts to resolve, here is a list of features currently implemented:
 
-## Usecases {#features}
+## Usecases
 
   - Manage models
     - [x] Map model aliases to existing model names (some tools only allow a pre-defined set of models)
@@ -42,7 +42,7 @@ There are various scenarios this projects attempts to resolve, here is a list of
     - [ ] Add config to enforce context size in each request `"options": { "num_ctx": 4096 }`
     - [ ] Add config to enforce context size per model/server `"options": { "num_ctx": 4096 }`
 
-## API {#api}
+## API
 Not all endpoints are covered, particularly endpoints which deal with customisation and creation of models are not supported until there is a clear usecase for this.
 
   - Supported endpoints
