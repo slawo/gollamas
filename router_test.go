@@ -15,32 +15,54 @@ import (
 )
 
 func TestNewRouterFailsOnMissingConfig(t *testing.T) {
-	r, err := gollamas.NewRouter(nil)
+	r, err := gollamas.NewRouter(nil, map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}})
 	assert.EqualError(t, err, "missing ollama client map")
 	assert.Nil(t, r)
 }
 
 func TestNewRouterFailsOnEmptyConfig(t *testing.T) {
-	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{})
+	r, err := gollamas.NewRouter(
+		map[string]gollamas.IOllamaClient{},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}},
+	)
 	assert.EqualError(t, err, "empty ollama client map")
+	assert.Nil(t, r)
+}
+
+func TestNewRouterFailsOnEmptyModelConnection(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	r, err := gollamas.NewRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {}},
+	)
+	assert.EqualError(t, err, "empty connection id for model llama3.2")
 	assert.Nil(t, r)
 }
 
 func TestNewRouterFailsOnNilClient(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": nil,
-	})
-	assert.EqualError(t, err, "nil client for model other_model")
+	r, err := gollamas.NewRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": nil,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}},
+	)
+	assert.EqualError(t, err, "nil client for connection id c2")
 	assert.Nil(t, r)
 }
 
 func TestNewRouterFailOnInvalidAlias(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2": c1,
-	}, gollamas.WithAlias("llama3", "wrong_model"))
+	r, err := gollamas.NewRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}},
+		gollamas.WithAlias("llama3", "wrong_model"),
+	)
 	assert.EqualError(t, err, "alias llama3 points to unknown model wrong_model")
 	assert.Nil(t, r)
 	c1.AssertExpectations(t)
@@ -48,27 +70,35 @@ func TestNewRouterFailOnInvalidAlias(t *testing.T) {
 
 func TestNewRouter(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
-	r, err := gollamas.NewRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2": c1,
-	}, gollamas.WithAlias("llama3", "llama3.2"))
+	r, err := gollamas.NewRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}},
+		gollamas.WithAlias("llama3", "llama3.2"),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 	c1.AssertExpectations(t)
 }
 
-func newRouter(cmap map[string]gollamas.IOllamaClient, opts ...gollamas.RouterOption) (context.Context, context.CancelFunc, *gollamas.Router, error) {
+func newRouter(cmap map[string]gollamas.IOllamaClient, pmap map[string]gollamas.ModelConfig, opts ...gollamas.RouterOption) (context.Context, context.CancelFunc, *gollamas.Router, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	r, err := gollamas.NewRouter(cmap, opts...)
+	r, err := gollamas.NewRouter(cmap, pmap, opts...)
 	return ctx, cancel, r, err
 }
 
 func TestRouterChat(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -125,10 +155,14 @@ func TestRouterChat(t *testing.T) {
 func TestRouterCopy(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -154,10 +188,14 @@ func TestRouterCopy(t *testing.T) {
 func TestRouterCreate(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -184,10 +222,14 @@ func TestRouterCreate(t *testing.T) {
 func TestRouterCreateBlob(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -206,10 +248,14 @@ func TestRouterCreateBlob(t *testing.T) {
 func TestRouterDelete(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -234,10 +280,14 @@ func TestRouterDelete(t *testing.T) {
 func TestRouterEmbed(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -316,10 +366,14 @@ func TestRouterEmbed(t *testing.T) {
 func TestRouterEmbeddings(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -396,10 +450,14 @@ func TestRouterEmbeddings(t *testing.T) {
 func TestRouterGenerate(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -450,10 +508,14 @@ func TestRouterGenerate(t *testing.T) {
 func TestRouterHeartbeat(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -471,10 +533,15 @@ func TestRouterHeartbeat(t *testing.T) {
 func TestRouterListNoExposeAliases(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false))
+
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -518,10 +585,14 @@ func TestRouterListNoExposeAliases(t *testing.T) {
 func TestRouterList(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(true),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -558,10 +629,14 @@ func TestRouterList(t *testing.T) {
 func TestRouterListRunningNoExposeAliases(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(false),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -594,10 +669,14 @@ func TestRouterListRunningNoExposeAliases(t *testing.T) {
 func TestRouterListRunning(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"), gollamas.WithExposeAliases(true),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -636,10 +715,14 @@ func TestRouterListRunning(t *testing.T) {
 func TestRouterPull(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -690,10 +773,14 @@ func TestRouterPull(t *testing.T) {
 func TestRouterPush(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	})
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -720,10 +807,14 @@ func TestRouterPush(t *testing.T) {
 func TestRouterShow(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -785,10 +876,14 @@ func TestRouterShow(t *testing.T) {
 func TestRouterVersion(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	c2 := mocks.NewIOllamaClient(t)
-	ctx, cancel, r, err := newRouter(map[string]gollamas.IOllamaClient{
-		"llama3.2":    c1,
-		"other_model": c2,
-	}, gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"))
+	ctx, cancel, r, err := newRouter(
+		map[string]gollamas.IOllamaClient{
+			"c1": c1,
+			"c2": c2,
+		},
+		map[string]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}, "other_model": {ConnectionID: "c2"}},
+		gollamas.WithAlias("llama3", "llama3.2"), gollamas.WithAlias("some_alias", "other_model"),
+	)
 	defer cancel()
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
