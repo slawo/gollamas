@@ -142,13 +142,13 @@ jobs:
           ${{ vars.DOCKERHUB_USERNAME }}/gollamas
           ghcr.io/${{ github.repository }}
         tags: |
-          type=semver,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.release-version }}
-          type=semver,pattern={{major}}.{{minor}},value=${{ inputs.release-version }}
-          type=semver,pattern={{major}},value=${{ inputs.release-version }}
-          type=semver,pattern=v{{major}}.{{minor}}.{{patch}},value=${{ inputs.release-version }}
-          type=semver,pattern=v{{major}}.{{minor}},value=${{ inputs.release-version }}
-          type=semver,pattern=v{{major}},value=${{ inputs.release-version }}
           type=sha,prefix=,suffix=,format=long
+          type=semver,pattern={{major}},value=${{ inputs.release-version }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ inputs.release-version }}
+          type=semver,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.release-version }}
+          type=semver,pattern=v{{major}},value=${{ inputs.release-version }}
+          type=semver,pattern=v{{major}}.{{minor}},value=${{ inputs.release-version }}
+          type=semver,pattern=v{{major}}.{{minor}}.{{patch}},value=${{ inputs.release-version }}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
