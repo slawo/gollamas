@@ -1,21 +1,21 @@
 package main
 
 type RouterOption interface {
-	Apply(opts *RouterOptions) error
+	ApplyTo(opts *RouterOptions) error
 }
 
 type RouterOptions struct {
 	Aliases map[string]string
 }
 
-func (o *RouterOptions) Apply(opts *RouterOptions) error {
+func (o *RouterOptions) ApplyTo(opts *RouterOptions) error {
 	applyOptionAliasConfig(opts, o.Aliases)
 	return nil
 }
 
 type RouterOptionFunc func(opts *RouterOptions) error
 
-func (o RouterOptionFunc) Apply(opts *RouterOptions) error {
+func (o RouterOptionFunc) ApplyTo(opts *RouterOptions) error {
 	return o(opts)
 }
 

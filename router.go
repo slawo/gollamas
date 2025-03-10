@@ -41,7 +41,7 @@ func NewRouter(cmap map[string]IOllamaClient, opts ...RouterOption) (*Router, er
 	}
 	opt := RouterOptions{}
 	for _, o := range opts {
-		if err := o.Apply(&opt); err != nil {
+		if err := o.ApplyTo(&opt); err != nil {
 			return nil, err
 		}
 	}
