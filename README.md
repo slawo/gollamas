@@ -24,8 +24,8 @@ Official images are available on docker hub and ghcr.io. You can run the latest 
 # Features
 
   - Manage models
-    - [ ] Map model aliases to existing model names (some tools only allow a pre-defined set of models)
-    - [ ] Set that by default only the configured models are returned when listing models
+    - [x] Map model aliases to existing model names (some tools only allow a pre-defined set of models)
+    - [x] Set that by default only the configured models are returned when listing models
     - [ ] Set option to allow requests to currently running models (ie server has additional model running)
   - Set model in memory
     - [ ] Preload models (ensure model is loaded uppon startup)
