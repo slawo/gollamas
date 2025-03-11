@@ -8,18 +8,66 @@ A per model "reverse proxy" which redirects requests to multiple ollama servers.
 
 This is a lowest effort implementation of a reverse proxy for ollama, it accepts mainly chat and generation requests, depending on the model requested it will transfer the payload to a server which has been specifically assigned to run the given model. Reffer to [API](#api) for a list of endpoints currently supported.
 
-## run locally
-
+## run binary
 ````
-go run ./*.go --level=trace --address 0.0.0.0:11434 --proxy=llama3.2-vision=http://server-02:11434 
---proxy=deepseek-r1:14b=http://server-01:11434
+gollamas --level=warn \
+    --listen 0.0.0.0:11434 
+    --proxy=tinyllama=http://server-01:11434 \
+    --proxy=llama3.2-vision=http://server-01:11434 \
+    --proxy=deepseek-r1:14b=http://server-02:11434
 ````
-
 ## run on docker
 Official images are available on docker hub and ghcr.io. You can run the latest image from either: 
 
-  - [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas): `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" slawoc/gollamas:latest`
-  - [ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas) : `docker run -it -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" ghcr.io/slawo/gollamas:latest`
+### from docker hub
+The main images are on [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas).
+
+
+```
+docker run -it \
+  -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" \
+  slawoc/gollamas:latest
+```
+
+### github
+Alternatively images are published to 
+[ghcr.io](https://github.com/slawo/gollamas/pkgs/container/gollamas).
+
+```
+docker run -it \
+  -e GOLLAMAS_PROXIES="llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434" \
+  ghcr.io/slawo/gollamas:latest
+```
+
+## run code locally
+
+````
+go run ./*.go --level=trace \
+    --listen 0.0.0.0:11434 
+    --proxy=tinyllama=http://server-02:11434 \
+    --proxy=llama3.2-vision=http://server-02:11434 \
+    --proxy=deepseek-r1:14b=http://server-01:11434
+````
+
+# flags
+
+The existing flags should remain fairly stable going forward, if flags are to be renamed best effort will be made to keep both the new name and old name as well as existing behaviour until final release.
+
+| Flag | Env var | Description |
+|------|---------|-------------|
+|`--listen` | "GOLLAMAS_LISTEN", "LISTEN" | address on which the router will be listening on, ie: "localhost:11434" |
+| `--proxy value`|  | assigns a destination for a model, can be a url or a connection id ex: --proxy 'llama3.2-vision=http://server:11434'] ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434' | `modelName=URL`
+|	`--proxies value`| "GOLLAMAS_PROXIES" "PROXIES" | assigns destinations for the models, in the list of model=destination pairs ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434' |
+|	`--connection value`|  | assigns an identifier to a connection which can be reffered to by proxy declarations ex: --connection c1=http://server:11434 --proxy llama=c1 |
+|	`--connections value`| "GOLLAMAS_CONNECTIONS" "CONNECTIONS" | provides a list of connections which can be reffered to by id ex: --connections c1=http://server:11434,c2=http://server2:11434 |
+|	`--alias value`|  | assigns an alias from an existing model name passed in the proxy configuration 'alias=concrete_model' ex: --alias gpt-3.5-turbo=llama3.2 |
+|	`--aliases value`| "GOLLAMAS_ALIASES", "ALIASES" | sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b' |
+|	`--list-aliases`| "GOLLAMAS_LIST_ALIASES" "LIST_ALIASES" | show aliases which match a model when listing models |
+
+For each option you can set either the flags or the environment variables, setting both is undefined behavior at this time
+
+Concerning the plural flags like `--aliases`, `--connections` and `--proxies` vs singular versions `--alias`, `--connection` and `--proxy` setting both is undefines behaviour at this time.
+
 
 # Features
 There are various scenarios this projects attempts to resolve, here is a list of features currently implemented:

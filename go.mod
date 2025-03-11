@@ -8,7 +8,8 @@ require (
 	github.com/ollama/ollama v0.5.11
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
-	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/urfave/cli/v3 v3.0.0-beta1.0.20241130210637-606c89a79657
+	golang.org/x/term v0.27.0
 )
 
 require (

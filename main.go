@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,15 +11,33 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
+	"golang.org/x/term"
 )
 
 func main() {
 	appName := filepath.Base(os.Args[0])
+	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
+		funcMap := map[string]interface{}{
+			"wrapAt": func() int {
+				w := 10000
+				tid := int(os.Stdout.Fd())
+				if term.IsTerminal(tid) {
+					width, _, err := term.GetSize(tid)
+					if err == nil {
+						w = width - 1
+					}
+				}
+				return w
+			},
+		}
 
+		cli.HelpPrinterCustom(w, templ, data, funcMap)
+	}
 	err := (&cli.Command{
 		Name:    appName,
 		Authors: []any{"Slawomir Caluch"},
 		Action:  runGollamasCli,
+		Usage:   "A router for golama models",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "listen",
@@ -30,7 +49,7 @@ func main() {
 			&cli.StringFlag{
 				Name:  "level",
 				Value: log.ErrorLevel.String(),
-				Usage: fmt.Sprintf("error level, can be any of %s",
+				Usage: fmt.Sprintf(`error level, can be any of %s`,
 					strings.Join([]string{
 						log.PanicLevel.String(),
 						log.FatalLevel.String(),
@@ -169,7 +188,6 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	if err != nil {
 		return fmt.Errorf("could not initialize gollamas config: %w", err)
 	}
-
 	return runGollamas(*cfg)
 }
 
