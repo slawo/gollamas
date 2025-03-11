@@ -278,6 +278,83 @@ func TestRunGollamas(t *testing.T) {
 				}))
 			},
 		},
+		"ps(with aliases)": {
+			method:       "GET",
+			url:          "/api/ps",
+			expectedcode: 200,
+			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
+				{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+				{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+			}},
+			prep: func(t *testing.T, mcs map[string]*mocks.IGinService) {
+				mcs["model1"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+				mcs["model2:4b"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+			},
+		},
+		"ps()": {
+			method:       "GET",
+			url:          "/api/ps",
+			expectedcode: 200,
+			conf: gollamas.GollamasConfig{
+				Aliases: map[string]string{"alias1": "model1"},
+			},
+			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
+				{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+				{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+			}},
+			prep: func(t *testing.T, mcs map[string]*mocks.IGinService) {
+				mcs["model1"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+				mcs["model2:4b"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+			},
+		},
+		"ps(with aliases and list aliases)": {
+			method:       "GET",
+			url:          "/api/ps",
+			expectedcode: 200,
+			conf: gollamas.GollamasConfig{
+				Aliases:     map[string]string{"alias1": "model1"},
+				ListAliases: true,
+			},
+			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
+				{Model: "alias1", Name: "alias1", ExpiresAt: time.UnixMilli(1741600010000)},
+				{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+				{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+			}},
+			prep: func(t *testing.T, mcs map[string]*mocks.IGinService) {
+				mcs["model1"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+				mcs["model2:4b"].On("PsHandler", mock.AnythingOfType("*gin.Context")).Once().Run(getRunInGinContext(t, func(c *gin.Context) {
+					c.JSON(http.StatusOK, api.ProcessResponse{Models: []api.ProcessModelResponse{
+						{Model: "model2:4b", Name: "model2:4b", ExpiresAt: time.UnixMilli(1741600020000)},
+						{Model: "other:2b", Name: "other:2b", ExpiresAt: time.UnixMilli(1741600050000)},
+					}})
+				}))
+			},
+		},
 
 		// EmbeddingsHandler(c *gin.Context)
 		// EmbedHandler(c *gin.Context)
@@ -285,7 +362,6 @@ func TestRunGollamas(t *testing.T) {
 		// HeadBlobHandler(c *gin.Context)
 		// HomeHandler(c *gin.Context)
 		// ListHandler(c *gin.Context)
-		// PsHandler(c *gin.Context)
 		// PullHandler(c *gin.Context)
 		// PushHandler(c *gin.Context)
 		// ShowHandler(c *gin.Context)
