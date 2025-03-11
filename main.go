@@ -65,7 +65,7 @@ func main() {
 			},
 			&cli.StringSliceFlag{
 				Name:  "proxy",
-				Usage: `assigns a destination for a model, can be a url or a connection id. ex: --proxy 'llama3.2-vision=http://server:11434'] ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434'`,
+				Usage: `assigns a destination for a model, can be a url or a connection id. ex: --proxy 'llama3.2-vision=http://server:11434' ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434'`,
 			},
 			&cli.StringFlag{
 				Name:    "proxies",

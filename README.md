@@ -56,7 +56,7 @@ The existing flags should remain fairly stable going forward, if flags are to be
 | Flag | Env var | Description |
 |------|---------|-------------|
 |`--listen` | "GOLLAMAS_LISTEN", "LISTEN" | address on which the router will be listening on, ie: "localhost:11434" |
-| `--proxy value`|  | assigns a destination for a model, can be a url or a connection id ex: --proxy 'llama3.2-vision=http://server:11434'] ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434' | `modelName=URL`
+| `--proxy value`|  | assigns a destination for a model, can be a url or a connection id ex: --proxy 'llama3.2-vision=http://server:11434' ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434' | `modelName=URL`
 |	`--proxies value`| "GOLLAMAS_PROXIES" "PROXIES" | assigns destinations for the models, in the list of model=destination pairs ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434' |
 |	`--connection value`|  | assigns an identifier to a connection which can be reffered to by proxy declarations ex: --connection c1=http://server:11434 --proxy llama=c1 |
 |	`--connections value`| "GOLLAMAS_CONNECTIONS" "CONNECTIONS" | provides a list of connections which can be reffered to by id ex: --connections c1=http://server:11434,c2=http://server2:11434 |
