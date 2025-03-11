@@ -46,20 +46,20 @@ func main() {
 			},
 			&cli.StringSliceFlag{
 				Name:  "proxy",
-				Usage: `defines a proxy for a given model ex: --proxy 'llama3.2-vision=http://server:11434'`,
+				Usage: `assigns a destination for a model, can be a url or a connection id. ex: --proxy 'llama3.2-vision=http://server:11434'] ex: --proxy 'llama3.2-vision=c1 --connection c1=http://server:11434'`,
 			},
 			&cli.StringFlag{
 				Name:    "proxies",
-				Usage:   `defines a list of proxies per model given model ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
+				Usage:   `assigns destinations for the models, in the list of model=destination pairs. ex: --proxies 'llama3.2-vision=http://server:11434,deepseek-r1:14b=http://server2:11434'`,
 				Sources: cli.EnvVars("GOLLAMAS_PROXIES", "PROXIES"),
 			},
 			&cli.StringSliceFlag{
 				Name:  "connection",
-				Usage: `assigns an identifier to a connection which can be reffered to by proxy declarations  ex: --connection c1=http://server:11434 --proxy llama=c1`,
+				Usage: `assigns an identifier to a connection which can be reffered to by proxy declarations ex: --connection c1=http://server:11434 --proxy llama=c1`,
 			},
 			&cli.StringFlag{
 				Name:    "connections",
-				Usage:   `provides a list of connection which can be reffered to by id ex: --connections c1=http://server:11434,c2=http://server2:11434`,
+				Usage:   `provides a list of connections which can be reffered to by id. ex: --connections c1=http://server:11434,c2=http://server2:11434`,
 				Sources: cli.EnvVars("GOLLAMAS_CONNECTIONS", "CONNECTIONS"),
 			},
 			&cli.StringSliceFlag{
