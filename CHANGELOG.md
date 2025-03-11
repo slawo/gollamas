@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/slawo/gollamas/compare/v0.4.1...v0.4.2) (2025-03-11)
+
+
+### Bug Fixes
+
+* add missing environment variable for --list-aliases ([32a5534](https://github.com/slawo/gollamas/commit/32a55344de4c1ff4b299a73d5e6899b2dcf03939))
+
 ## [0.4.1](https://github.com/slawo/gollamas/compare/v0.4.0...v0.4.1) (2025-03-11)
 
 
