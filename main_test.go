@@ -42,13 +42,22 @@ func TestInitServiceFailOnMissingConnectionsConfig(t *testing.T) {
 	assert.Nil(t, s)
 }
 
-func TestInitServiceFailOnEmptyConnectionsConfig(t *testing.T) {
+func TestInitServiceSucceedsOnEmptyConnectionsConfig(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
+}
+
+func TestInitServiceFailsOnUnmetConnectionIdConfig(t *testing.T) {
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
+		Connections: map[string]gollamas.ConnectionConfig{},
+		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "unknown"}},
+	})
+	assert.EqualError(t, err, "invalid connection connection id: unknown, could not convert to valid url")
+	assert.Nil(t, s)
 }
 
 func TestInitServiceFailOnFailedAliases(t *testing.T) {

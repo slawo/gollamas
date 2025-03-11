@@ -445,8 +445,8 @@ func reconcileConnectionsAndProxyConfigs(cc map[string]ConnectionConfig, pc map[
 		if v.Url == "" {
 			return nil, nil, fmt.Errorf("connection %s has an empty url", k)
 		}
-		_, err := url.Parse(v.ConnectionID)
-		if err != nil {
+		u, err := url.Parse(v.Url)
+		if err != nil || u.Scheme == "" {
 			return nil, nil, fmt.Errorf("invalid connection url: %s", k)
 		}
 		urls2ids[v.Url] = append(urls2ids[v.Url], k)
@@ -474,6 +474,10 @@ func reconcileConnectionsAndProxyConfigs(cc map[string]ConnectionConfig, pc map[
 				}
 			} else {
 				// we have a new connection
+				u, err := url.Parse(v.ConnectionID)
+				if err != nil || u.Scheme == "" {
+					return nil, nil, fmt.Errorf("invalid connection connection id: %s, could not convert to valid url", v.ConnectionID)
+				}
 				cconf[v.ConnectionID] = ConnectionConfig{
 					ConnectionID: v.ConnectionID,
 					Url:          v.ConnectionID,
