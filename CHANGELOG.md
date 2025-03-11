@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/slawo/gollamas/compare/v0.4.0...v0.4.1) (2025-03-11)
+
+
+### Bug Fixes
+
+* fixes [#14](https://github.com/slawo/gollamas/issues/14) remove duplicate calls to aggregate endpoints ([6161f1c](https://github.com/slawo/gollamas/commit/6161f1c6e72221157d5d199bb0763a8f9a61aa4c))
+
 ## [0.4.0](https://github.com/slawo/gollamas/compare/v0.3.1...v0.4.0) (2025-03-10)
 
 
