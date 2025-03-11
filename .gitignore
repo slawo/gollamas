@@ -7,11 +7,13 @@
 *.iml
 .vscode/
 .DS_Store
+tests.env
 
 # build and debug artefacts
 /dist
 /.bin
 __debug_*
+coverage*
 
 # Binaries for programs and plugins
 *.exe
