@@ -26,54 +26,61 @@ func TestInitServiceFailOnMissingProxyConfig(t *testing.T) {
 }
 
 func TestInitServiceFailOnEmptyProxyConfig(t *testing.T) {
-	_, err := gollamas.InitService(gollamas.GollamasConfig{
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Models:      map[string]gollamas.ModelConfig{},
 		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
 	})
 	assert.EqualError(t, err, "empty models config")
+	assert.Nil(t, s)
 }
 
 func TestInitServiceFailOnMissingConnectionsConfig(t *testing.T) {
-	_, err := gollamas.InitService(gollamas.GollamasConfig{
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Models: map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 	})
 	assert.EqualError(t, err, "missing connections config")
+	assert.Nil(t, s)
 }
 
 func TestInitServiceFailOnEmptyConnectionsConfig(t *testing.T) {
-	_, err := gollamas.InitService(gollamas.GollamasConfig{
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
 	})
 	assert.NoError(t, err)
+	assert.NotNil(t, s)
 }
 
 func TestInitServiceFailOnFailedAliases(t *testing.T) {
-	_, err := gollamas.InitService(gollamas.GollamasConfig{
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 		Aliases:     map[string]string{"alias1": "unknown_model"},
 	})
 	assert.EqualError(t, err, "alias alias1 points to unknown model unknown_model")
+	assert.Nil(t, s)
 }
 
 func TestInitService(t *testing.T) {
-	_, err := gollamas.InitService(gollamas.GollamasConfig{
+	s, err := gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{"http://localhost:8080": {Url: "http://localhost:8080"}},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
 	})
 	assert.NoError(t, err)
-	_, err = gollamas.InitService(gollamas.GollamasConfig{
+	assert.NotNil(t, s)
+	s, err = gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 	})
 	assert.NoError(t, err)
-	_, err = gollamas.InitService(gollamas.GollamasConfig{
+	assert.NotNil(t, s)
+	s, err = gollamas.InitService(gollamas.GollamasConfig{
 		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
 		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 		Aliases:     map[string]string{"alias1": "model1"},
 	})
 	assert.NoError(t, err)
+	assert.NotNil(t, s)
 }
 
 func TestRunGollamas(t *testing.T) {
