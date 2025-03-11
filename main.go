@@ -91,8 +91,9 @@ func main() {
 				Sources: cli.EnvVars("GOLLAMAS_ALIASES", "ALIASES"),
 			},
 			&cli.BoolFlag{
-				Name:  "list-aliases",
-				Usage: `exposes aliases in the router`,
+				Name:    "list-aliases",
+				Usage:   `exposes aliases in the router`,
+				Sources: cli.EnvVars("GOLLAMAS_LIST_ALIASES", "LIST_ALIASES"),
 			},
 		},
 		Commands: []*cli.Command{
