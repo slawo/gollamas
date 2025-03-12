@@ -9,6 +9,8 @@ A per model "reverse proxy" which redirects requests to multiple ollama servers.
 This is a reverse proxy for ollama, it accepts mainly chat and generation requests, it reads requests and  transfers the payload to a server which has been specifically assigned to run the model reffered to in the request. Reffer to [API](#api) for a list of endpoints currently supported.
 
 ## run binary
+Binaries are automatically compiled and made available in the [latest github release](https://github.com/slawo/gollamas/releases/latest).
+
 ````
 gollamas --level=warn \
     --listen 0.0.0.0:11434 
@@ -17,7 +19,9 @@ gollamas --level=warn \
     --proxy=deepseek-r1:14b=http://server-02:11434
 ````
 ## run on docker
-Official images are available on docker hub and ghcr.io. You can run the latest image from either: 
+Images are automatically built for `amd64`, `arm`, `arm64`, `riscv64`, `s390x` and `ppc64le`. Issues for other architectures are welcome.
+
+Official images are automaticaly made available on docker hub and ghcr.io. You can run the latest image from either.
 
 ### from docker hub
 The main images are on [docker hub](https://hub.docker.com/repository/docker/slawoc/gollamas).
