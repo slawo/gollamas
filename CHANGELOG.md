@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/slawo/gollamas/compare/v0.4.2...v0.4.3) (2025-03-12)
+
+
+### Bug Fixes
+
+* validate connection urls properly ([6fcc8e4](https://github.com/slawo/gollamas/commit/6fcc8e4e3bd98c4b9ff295f9a4a73848387fb6af))
+
 ## [0.4.2](https://github.com/slawo/gollamas/compare/v0.4.1...v0.4.2) (2025-03-11)
 
 
