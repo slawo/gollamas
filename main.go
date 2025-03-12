@@ -16,6 +16,12 @@ import (
 
 func main() {
 	appName := filepath.Base(os.Args[0])
+	if err := runCli(appName); err != nil {
+		log.Fatalf("%s ended with error: %s", appName, err.Error())
+	}
+}
+
+func runCli(appName string) error {
 	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
 		funcMap := map[string]interface{}{
 			"wrapAt": func() int {
@@ -33,7 +39,7 @@ func main() {
 
 		cli.HelpPrinterCustom(w, templ, data, funcMap)
 	}
-	err := (&cli.Command{
+	return (&cli.Command{
 		Name:    appName,
 		Authors: []any{"Slawomir Caluch"},
 		Action:  runGollamasCli,
@@ -100,9 +106,6 @@ func main() {
 			getVersionCommand(),
 		},
 	}).Run(context.Background(), os.Args)
-	if err != nil {
-		log.Fatalf("%s ended with error: %s", appName, err.Error())
-	}
 }
 
 func initErrorLevel(e string) error {
@@ -118,6 +121,9 @@ func initConnectionsConfig(ss []string) (map[string]ConnectionConfig, error) {
 	res := map[string]ConnectionConfig{}
 	log.WithField("strings", ss).Trace("Initialize connection map.")
 	for _, s := range ss {
+		if s == "" {
+			return nil, fmt.Errorf("empty connection string")
+		}
 		v := strings.SplitN(s, "=", 2)
 		if len(v) != 2 {
 			return nil, fmt.Errorf("invalid connection string: %s", s)
@@ -141,6 +147,9 @@ func initProxyConfig(ss []string) (map[string]ModelConfig, error) {
 	res := map[string]ModelConfig{}
 	log.WithField("strings", ss).Trace("Initialize proxy configuration.")
 	for _, s := range ss {
+		if s == "" {
+			return nil, fmt.Errorf("empty proxy string")
+		}
 		v := strings.SplitN(s, "=", 2)
 		if len(v) != 2 {
 			return nil, fmt.Errorf("invalid proxy string: %s", s)
@@ -163,6 +172,9 @@ func initAliasesMap(ss []string) (map[string]string, error) {
 	aliases := map[string]string{}
 	log.WithField("aliases", aliases).Trace("Initialize aliases.")
 	for _, s := range ss {
+		if s == "" {
+			return nil, fmt.Errorf("empty alias string")
+		}
 		v := strings.SplitN(s, "=", 2)
 		if len(v) != 2 {
 			return nil, fmt.Errorf("invalid alias string: %s", s)
@@ -268,7 +280,9 @@ func InitService(cfg GollamasConfig) (*Service, error) {
 	return NewService(r)
 }
 
-func runGollamas(cfg GollamasConfig) error {
+var runGollamas = RunGollamas
+
+func RunGollamas(cfg GollamasConfig) error {
 	s, err := InitService(cfg)
 	if err != nil {
 		return err
