@@ -49,7 +49,9 @@ go run ./*.go --level=trace \
     --proxy=deepseek-r1:14b=http://server-01:11434
 ````
 
-# flags
+# Usage
+
+## parameters
 
 The existing flags should remain fairly stable going forward, if flags are to be renamed best effort will be made to keep both the new name and old name as well as existing behaviour until final release.
 
@@ -64,10 +66,23 @@ The existing flags should remain fairly stable going forward, if flags are to be
 |	`--aliases value`| "GOLLAMAS_ALIASES", "ALIASES" | sets aliases for the given model names ex: --aliases 'gpt-3.5-turbo=llama3.2,deepseek=deepseek-r1:14b' |
 |	`--list-aliases`| "GOLLAMAS_LIST_ALIASES" "LIST_ALIASES" | show aliases which match a model when listing models |
 
-For each option you can set either the flags or the environment variables, setting both is undefined behavior at this time
+## plural flags
+You should use the singular flags `--alias`, `--connection` and `--proxy` vs providing a coma separated list to plural flags like `--aliases`, `--connections` and `--proxies`.
+Usage of the plural flags is discouraged, those flags have been added as a temporary solution to permit passing the associated environment variables in docker containers. Those flags might be removed in future versions while the environemt variables will be retained.
 
-Concerning the plural flags like `--aliases`, `--connections` and `--proxies` vs singular versions `--alias`, `--connection` and `--proxy` setting both is undefines behaviour at this time.
+Setting both sigular flags and plural ones will not result in errors but will result in undefined behaviour which can change with future versions. Use only one type of flags, preferably the singular versions.
 
+## environment variables
+For each option you can set either the flags or the environment variables, setting both will result in undefined behavior which can change with future versions.
+
+Use the `GOLLAMAS_` prefixed environment variables.
+
+## connections
+You can asign ids to connections like so `--connection CID1=http://main-ai:11434 --connection CID2=http://mini-ai-01:11434` and reffer to each connection by id when listing the models to be proxied `--proxy deepseek-r1:70b=CID1 --proxy tinyllama=CID2`.
+
+When a connection is given an id the the ID will be used instead of the url string in any responses or logs
+
+Since 0.4.1 when multiple models are proxied to the same URL only one connection will be created for that url.It is still possible to create 2 connections on the same URL using the `--connection` flag (`--connection C1=http://server1 --connection C2=http://server1`).
 
 # Features
 There are various scenarios this projects attempts to resolve, here is a list of features currently implemented:
