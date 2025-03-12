@@ -6,7 +6,7 @@ A per model "reverse proxy" which redirects requests to multiple ollama servers.
 [![CI status](https://flat.badgen.net/github/checks/slawo/gollamas)](https://github.com/slawo/gollamas/actions)
 [![docker hub](https://flat.badgen.net/docker/pulls/slawoc/gollamas)](https://hub.docker.com/r/slawoc/gollamas)
 
-This is a lowest effort implementation of a reverse proxy for ollama, it accepts mainly chat and generation requests, depending on the model requested it will transfer the payload to a server which has been specifically assigned to run the given model. Reffer to [API](#api) for a list of endpoints currently supported.
+This is a reverse proxy for ollama, it accepts mainly chat and generation requests, it reads requests and  transfers the payload to a server which has been specifically assigned to run the model reffered to in the request. Reffer to [API](#api) for a list of endpoints currently supported.
 
 ## run binary
 ````
@@ -85,7 +85,7 @@ When a connection is given an id the the ID will be used instead of the url stri
 Since 0.4.1 when multiple models are proxied to the same URL only one connection will be created for that url.It is still possible to create 2 connections on the same URL using the `--connection` flag (`--connection C1=http://server1 --connection C2=http://server1`).
 
 # Features
-There are various scenarios this projects attempts to resolve, here is a list of features currently implemented:
+There are various scenarios this projects attempts to resolve, here is a list of features currently implemented and being considered for implementation:
 
 ## Usecases
 
@@ -140,4 +140,4 @@ Not all endpoints are covered, particularly endpoints which deal with customisat
 The server relies on existing ollama models and middlewares to speed up the development of the initial implementation.
 Only the requests which have a `model` ( or the deprecated `name`) field are transfered to the right server.
 
-When possible other endpoints hit all configured servers to either select one answer (ie: the lowest `version` available), or are combined into oone response (ie: lists of models).
+When possible other endpoints hit all configured servers to either select one answer (ie: the lowest `version` available), or are combined and processed into one response (ie: lists of models).
