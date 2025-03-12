@@ -105,6 +105,8 @@ func runCli(appName string) error {
 		Commands: []*cli.Command{
 			getVersionCommand(),
 		},
+		Copyright: "Slawomir Caluch",
+		Version:   Version,
 	}).Run(context.Background(), os.Args)
 }
 
