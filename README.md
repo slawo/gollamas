@@ -135,8 +135,8 @@ Not all endpoints are covered, particularly endpoints which deal with customisat
 	- [x] `POST /v1/embeddings`
 
   - Not supported
-	- [ ] `HEAD /api/blobs/:digest`
 	- [ ] `DELETE /api/delete`
+	- [ ] `HEAD /api/blobs/:digest`
 	- [ ] `POST /api/blobs/:digest`
 	- [ ] `POST /api/copy`
 	- [ ] `POST /api/create`
