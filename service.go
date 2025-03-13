@@ -191,52 +191,71 @@ type IGinService interface {
 }
 
 func GenerateRoutes(s IGinService) *gin.Engine {
-	config := cors.DefaultConfig()
-	config.AllowWildcard = true
-	config.AllowBrowserExtensions = true
-	config.AllowHeaders = []string{"Authorization", "Content-Type", "User-Agent", "Accept", "X-Requested-With"}
-	openAIProperties := []string{"lang", "package-version", "os", "arch", "retry-count", "runtime", "runtime-version", "async", "helper-method", "poll-helper", "custom-poll-interval"}
-	for _, prop := range openAIProperties {
-		config.AllowHeaders = append(config.AllowHeaders, "x-stainless-"+prop)
-	}
-	config.AllowOrigins = envconfig.Origins()
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowWildcard = true
+	corsConfig.AllowBrowserExtensions = true
+	corsConfig.AllowHeaders = []string{
+		"Authorization",
+		"Content-Type",
+		"User-Agent",
+		"Accept",
+		"X-Requested-With",
 
+		// OpenAI compatibility headers
+		"x-stainless-lang",
+		"x-stainless-package-version",
+		"x-stainless-os",
+		"x-stainless-arch",
+		"x-stainless-retry-count",
+		"x-stainless-runtime",
+		"x-stainless-runtime-version",
+		"x-stainless-async",
+		"x-stainless-helper-method",
+		"x-stainless-poll-helper",
+		"x-stainless-custom-poll-interval",
+		"x-stainless-timeout",
+	}
+	corsConfig.AllowOrigins = envconfig.AllowedOrigins()
 	r := gin.Default()
 	r.Use(
-		cors.New(config),
+		cors.New(corsConfig),
 	)
 
 	// refer to https://github.com/ollama/ollama/blob/0667baddc658d3f556a369701819e7695477f59a/server/routes.go#L1146
 	// for the routes and setup in this file
-	r.DELETE("/api/delete", s.DeleteHandler)
-
-	r.GET("/", s.HomeHandler)
-	r.GET("/api/ps", s.PsHandler)
-	r.GET("/api/tags", s.ListHandler)
-	r.GET("/api/version", s.VersionHandler)
-	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
-	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
-
+	// General
 	r.HEAD("/", s.HomeHandler)
-	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
-	r.HEAD("/v1/models", openai.ListMiddleware(), s.ListHandler)
-	r.HEAD("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
+	r.GET("/", s.HomeHandler)
+	r.HEAD("/api/version", s.VersionHandler)
+	r.GET("/api/version", s.VersionHandler)
 
-	r.POST("/api/chat", s.ChatHandler)
-	r.POST("/api/copy", s.CopyHandler)
-	r.POST("/api/create", s.CreateHandler)
-	r.POST("/api/generate", s.GenerateHandler)
-	r.POST("/api/embed", s.EmbedHandler)
-	r.POST("/api/embeddings", s.EmbeddingsHandler)
+	// Local model cache management (new implementation is at end of function)
 	r.POST("/api/pull", s.PullHandler)
 	r.POST("/api/push", s.PushHandler)
+	r.HEAD("/api/tags", s.ListHandler)
+	r.GET("/api/tags", s.ListHandler)
 	r.POST("/api/show", s.ShowHandler)
-	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
+	r.DELETE("/api/delete", s.DeleteHandler)
 
-	// Compatibility endpoints
+	// Create
+	r.POST("/api/create", s.CreateHandler)
+	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
+	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
+	r.POST("/api/copy", s.CopyHandler)
+
+	// Inference
+	r.GET("/api/ps", s.PsHandler)
+	r.POST("/api/generate", s.GenerateHandler)
+	r.POST("/api/chat", s.ChatHandler)
+	r.POST("/api/embed", s.EmbedHandler)
+	r.POST("/api/embeddings", s.EmbeddingsHandler)
+
+	// Inference (OpenAI compatibility)
 	r.POST("/v1/chat/completions", openai.ChatMiddleware(), s.ChatHandler)
 	r.POST("/v1/completions", openai.CompletionsMiddleware(), s.GenerateHandler)
 	r.POST("/v1/embeddings", openai.EmbeddingsMiddleware(), s.EmbedHandler)
+	r.GET("/v1/models", openai.ListMiddleware(), s.ListHandler)
+	r.GET("/v1/models/:model", openai.RetrieveMiddleware(), s.ShowHandler)
 
 	return r
 }
