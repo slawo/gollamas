@@ -36,7 +36,6 @@ func runCli(appName string) error {
 				return w
 			},
 		}
-
 		cli.HelpPrinterCustom(w, templ, data, funcMap)
 	}
 	return (&cli.Command{
@@ -55,7 +54,7 @@ func runCli(appName string) error {
 			&cli.StringFlag{
 				Name:  "level",
 				Value: log.ErrorLevel.String(),
-				Usage: fmt.Sprintf(`error level, can be any of %s`,
+				Usage: fmt.Sprintf(`error level, can be any of "%s"`,
 					strings.Join([]string{
 						log.PanicLevel.String(),
 						log.FatalLevel.String(),
@@ -64,7 +63,7 @@ func runCli(appName string) error {
 						log.InfoLevel.String(),
 						log.DebugLevel.String(),
 						log.TraceLevel.String(),
-					}, "|"),
+					}, `", "`),
 				),
 				Aliases: []string{"error-level"},
 				Sources: cli.EnvVars("GOLLAMAS_LEVEL", "LEVEL"),
@@ -136,7 +135,6 @@ func initConnectionsConfig(ss []string) (map[string]ConnectionConfig, error) {
 		if v[1] == "" {
 			return nil, fmt.Errorf("empty connection destination in %s", s)
 		}
-
 		res[v[0]] = ConnectionConfig{
 			ConnectionID: v[0],
 			Url:          v[1],
@@ -162,7 +160,6 @@ func initProxyConfig(ss []string) (map[string]ModelConfig, error) {
 		if v[1] == "" {
 			return nil, fmt.Errorf("empty proxy destination in %s", s)
 		}
-
 		res[v[0]] = ModelConfig{
 			ConnectionID: v[1],
 		}
