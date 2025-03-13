@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/slawo/gollamas/compare/v0.4.3...v0.4.4) (2025-03-13)
+
+
+### Bug Fixes
+
+* fix broken ollama api compatibility ([ad32a2d](https://github.com/slawo/gollamas/commit/ad32a2df37b009937108ef353afd19e2b5f53744))
+
 ## [0.4.3](https://github.com/slawo/gollamas/compare/v0.4.2...v0.4.3) (2025-03-12)
 
 
