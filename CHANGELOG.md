@@ -6,6 +6,13 @@
 ### Bug Fixes
 
 * fix broken ollama api compatibility ([ad32a2d](https://github.com/slawo/gollamas/commit/ad32a2df37b009937108ef353afd19e2b5f53744))
+* fix [vulnerability in crypto](https://hub.docker.com/repository/docker/slawoc/gollamas/tags/v0.4.3/sha256-ed854d93bb2d851b213d09fcca66dd7bc5b5b43d91a75ffde5c6cacddcd8aae4) - update modules ([3c59f4b](https://github.com/slawo/gollamas/commit/3c59f4b5f20a1cc3615d0362569894dbfc2a8c4c))
+
+### Dependencies
+
+* update go version for tests and release builds ([f18625b](https://github.com/slawo/gollamas/commit/f18625bb9cad97f9649a298c03cafe18dcb5d355))
+* update modules ([3c59f4b](https://github.com/slawo/gollamas/commit/3c59f4b5f20a1cc3615d0362569894dbfc2a8c4c))
+* upgrade go version ([7f85425](https://github.com/slawo/gollamas/commit/7f854255d9925a706a00bf417da26d36469f7f6f))
 
 ## [0.4.3](https://github.com/slawo/gollamas/compare/v0.4.2...v0.4.3) (2025-03-12)
 
