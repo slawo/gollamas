@@ -32,27 +32,6 @@ func prepareTestOsArgs(t *testing.T, args ...string) *mock.Mock {
 	return &m
 }
 
-// func TestMainFunc(t *testing.T) {
-// 	r, m := prepareTestOsArgs(t,
-// 		"gollamas", "--listen", "0.0.0.0:12345",
-// 	)
-// 	m.On("mockRunGollamas", GollamasConfig{
-// 		Listen:      "0.0.0.0:12345",
-// 		Connections: map[string]ConnectionConfig{},
-// 		Models:      map[string]ModelConfig{},
-// 		Aliases:     map[string]string{},
-// 		ListAliases: false,
-// 	}).Return(nil)
-// 	err := runCli("gollamas")
-// 	r.Close()
-// 	out, _ := io.ReadAll(r)
-// 	assert.EqualError(t, err, "   empty models config")
-// 	assert.Contains(t, "ended with error: empty models config", out)
-// 	m.AssertExpectations(t)
-
-// 	// Test results here, and decide pass/fail.
-// }
-
 func TestRunCliConfig(t *testing.T) {
 	for name, tt := range map[string]struct {
 		args   []string
