@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/ollama/ollama/api"
@@ -16,43 +17,62 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ConnectionID string
+
+func (cid *ConnectionID) String() string {
+	if nil == cid {
+		return ""
+	}
+	return string(*cid)
+}
+
+type ModelID string
+
+func (mid *ModelID) String() string {
+	if nil == mid {
+		return ""
+	}
+	return string(*mid)
+}
+
 type ModelConfig struct {
-	ConnectionID string
+	ConnectionID ConnectionID
 }
 
 // NewRouter creates a new router
-func NewRouter(cmap map[string]IOllamaClient, mconf map[string]ModelConfig, opts ...RouterOption) (*Router, error) {
+func NewRouter(cmap map[ConnectionID]IOllamaClient, mconf map[ModelID]ModelConfig, opts ...RouterOption) (*Router, error) {
 	if cmap == nil {
 		return nil, errors.New("missing ollama client map")
 	}
 	if len(cmap) == 0 {
 		return nil, errors.New("empty ollama client map")
 	}
-	clids := make(map[string]IOllamaClient, len(cmap))
-	all2ModelID := map[string]string{}
-	cids2models := map[string][]string{}
+	clids := make(map[ConnectionID]IOllamaClient, len(cmap))
+	all2ModelID := map[ModelID]ModelID{}
+	cids2models := map[ConnectionID][]ModelID{}
 
 	for id, cl := range cmap {
 		if cl == nil {
 			return nil, fmt.Errorf("nil client for connection id %s", id)
 		}
 		clids[id] = cl
-		cids2models[id] = []string{}
+		cids2models[id] = []ModelID{}
 	}
 	for id, mc := range mconf {
-		if mc.ConnectionID == "" {
+		cid := mc.ConnectionID.String()
+		if strings.TrimSpace(cid) == "" {
 			return nil, fmt.Errorf("empty connection id for model %s", id)
 		}
 		if _, ok := clids[mc.ConnectionID]; !ok {
 			return nil, fmt.Errorf("unknown connection id for model %s", id)
 		}
 		cids2models[mc.ConnectionID] = append(cids2models[mc.ConnectionID], id)
-		name := model.ParseName(id)
+		name := model.ParseName(id.String())
 		if !name.IsValid() {
 			return nil, fmt.Errorf("invalid model name: %s", id)
 		}
 		all2ModelID[id] = id
-		all2ModelID[name.DisplayShortest()] = id
+		all2ModelID[ModelID(name.DisplayShortest())] = id
 	}
 	opt := RouterOptions{ExposeAliases: true}
 	for _, o := range opts {
@@ -75,12 +95,12 @@ func NewRouter(cmap map[string]IOllamaClient, mconf map[string]ModelConfig, opts
 
 // Router is a router that routes requests to the appropriate client
 type Router struct {
-	modelCfg      map[string]ModelConfig
-	cmap          map[string]IOllamaClient
-	cids2models   map[string][]string
-	all2ModelID   map[string]string // this is a temporary map of all possible names with the id of the connection
-	alias2model   map[string]string
-	model2aliases map[string][]string
+	modelCfg      map[ModelID]ModelConfig
+	cmap          map[ConnectionID]IOllamaClient
+	cids2models   map[ConnectionID][]ModelID
+	all2ModelID   map[ModelID]ModelID // this is a temporary map of all possible names with the id of the connection
+	alias2model   map[ModelID]ModelID
+	model2aliases map[ModelID][]ModelID
 	exposeAliases bool
 }
 
@@ -89,7 +109,7 @@ func (r *Router) Chat(ctx context.Context, req *api.ChatRequest, fn api.ChatResp
 	if err != nil {
 		return err
 	}
-	req.Model = m
+	req.Model = m.String()
 	return cl.Chat(ctx, req, fn)
 }
 
@@ -114,7 +134,7 @@ func (r *Router) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedRe
 	if err != nil {
 		return nil, err
 	}
-	req.Model = m
+	req.Model = m.String()
 	return cl.Embed(ctx, req)
 }
 
@@ -123,7 +143,7 @@ func (r *Router) Embeddings(ctx context.Context, req *api.EmbeddingRequest) (*ap
 	if err != nil {
 		return nil, err
 	}
-	req.Model = m
+	req.Model = m.String()
 	return cl.Embeddings(ctx, req)
 }
 
@@ -132,20 +152,20 @@ func (r *Router) Generate(ctx context.Context, req *api.GenerateRequest, fn api.
 	if err != nil {
 		return err
 	}
-	req.Model = m
+	req.Model = m.String()
 	return cl.Generate(ctx, req, fn)
 }
 
 func (r *Router) Heartbeat(ctx context.Context) error {
 	type idErr struct {
-		cid string
+		cid ConnectionID
 		err error
 	}
 	ch := make(chan idErr)
 	wg := sync.WaitGroup{}
 	for cid, cl := range r.cmap {
 		wg.Add(1)
-		go func(id string, cl IOllamaClient) {
+		go func(cid ConnectionID, cl IOllamaClient) {
 			defer wg.Done()
 			err := cl.Heartbeat(ctx)
 			ch <- idErr{cid: cid, err: err}
@@ -167,7 +187,7 @@ func (r *Router) List(ctx context.Context) (*api.ListResponse, error) {
 	wg := sync.WaitGroup{}
 	for cid, v := range r.cmap {
 		wg.Add(1)
-		go func(cid string, cl IOllamaClient) {
+		go func(cid ConnectionID, cl IOllamaClient) {
 			defer wg.Done()
 			v, err := cl.List(ctx)
 			if err != nil {
@@ -197,11 +217,11 @@ func (r *Router) List(ctx context.Context) (*api.ListResponse, error) {
 	return &res, nil
 }
 
-func (r *Router) filterListToMapedModels(orig []api.ListModelResponse, ids ...string) []api.ListModelResponse {
-	idsmap := map[string]string{}
+func (r *Router) filterListToMapedModels(orig []api.ListModelResponse, ids ...ModelID) []api.ListModelResponse {
+	idsmap := map[string]ModelID{}
 	for _, id := range ids {
-		idsmap[id] = id
-		name := model.ParseName(id)
+		idsmap[id.String()] = id
+		name := model.ParseName(id.String())
 		idsmap[name.DisplayShortest()] = id
 	}
 	log.WithField("ids_map", idsmap).Trace("filterListToMapedModels.")
@@ -214,8 +234,8 @@ func (r *Router) filterListToMapedModels(orig []api.ListModelResponse, ids ...st
 			if r.exposeAliases && len(r.model2aliases[id]) > 0 {
 				for _, alias := range r.model2aliases[id] {
 					res = append(res, api.ListModelResponse{
-						Name:       alias,
-						Model:      alias,
+						Name:       alias.String(),
+						Model:      alias.String(),
 						ModifiedAt: m.ModifiedAt,
 						Size:       m.Size,
 						Digest:     m.Digest,
@@ -239,7 +259,7 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 	wg := sync.WaitGroup{}
 	for cid, v := range r.cmap {
 		wg.Add(1)
-		go func(cid string, cl IOllamaClient) {
+		go func(cid ConnectionID, cl IOllamaClient) {
 			defer wg.Done()
 			v, err := cl.ListRunning(ctx)
 			if err != nil {
@@ -272,11 +292,11 @@ func (r *Router) ListRunning(ctx context.Context) (*api.ProcessResponse, error) 
 	return &res, nil
 }
 
-func (r *Router) filterRunningListToMapedModels(orig []api.ProcessModelResponse, ids ...string) []api.ProcessModelResponse {
-	idsmap := map[string]string{}
+func (r *Router) filterRunningListToMapedModels(orig []api.ProcessModelResponse, ids ...ModelID) []api.ProcessModelResponse {
+	idsmap := map[string]ModelID{}
 	for _, id := range ids {
-		idsmap[id] = id
-		name := model.ParseName(id)
+		idsmap[id.String()] = id
+		name := model.ParseName(id.String())
 		idsmap[name.DisplayShortest()] = id
 	}
 	log.WithField("ids_map", idsmap).Trace("filterRunningListToMapedModels.")
@@ -288,8 +308,8 @@ func (r *Router) filterRunningListToMapedModels(orig []api.ProcessModelResponse,
 			if r.exposeAliases && len(r.model2aliases[id]) > 0 {
 				for _, alias := range r.model2aliases[id] {
 					res = append(res, api.ProcessModelResponse{
-						Name:      alias,
-						Model:     alias,
+						Name:      alias.String(),
+						Model:     alias.String(),
 						Size:      m.Size,
 						Digest:    m.Digest,
 						Details:   m.Details,
@@ -311,9 +331,9 @@ func (r *Router) Pull(ctx context.Context, req *api.PullRequest, fn api.PullProg
 		return err
 	}
 	if req.Model == "" {
-		req.Name = m
+		req.Name = m.String()
 	} else {
-		req.Model = m
+		req.Model = m.String()
 	}
 	return cl.Pull(ctx, req, fn)
 }
@@ -328,9 +348,9 @@ func (r *Router) Show(ctx context.Context, req *api.ShowRequest) (*api.ShowRespo
 		return nil, err
 	}
 	if req.Model == "" {
-		req.Name = m
+		req.Name = m.String()
 	} else {
-		req.Model = m
+		req.Model = m.String()
 	}
 	return cl.Show(ctx, req)
 }
@@ -340,7 +360,7 @@ func (r *Router) Version(ctx context.Context) (string, error) {
 	wg := sync.WaitGroup{}
 	for cid, v := range r.cmap {
 		wg.Add(1)
-		go func(id string, cl IOllamaClient) {
+		go func(id ConnectionID, cl IOllamaClient) {
 			defer wg.Done()
 			v, err := cl.Version(ctx)
 			if err != nil {
@@ -362,15 +382,15 @@ func (r *Router) Version(ctx context.Context) (string, error) {
 	return v, nil
 }
 
-func (r *Router) setAliases(aliases map[string]string) error {
+func (r *Router) setAliases(aliases map[ModelID]ModelID) error {
 	if len(aliases) == 0 {
 		return nil
 	}
 	if r.alias2model == nil {
-		r.alias2model = map[string]string{}
+		r.alias2model = map[ModelID]ModelID{}
 	}
 	if r.model2aliases == nil {
-		r.model2aliases = map[string][]string{}
+		r.model2aliases = map[ModelID][]ModelID{}
 	}
 	for k, v := range aliases {
 		if err := r.addAlias(k, v); err != nil {
@@ -380,7 +400,7 @@ func (r *Router) setAliases(aliases map[string]string) error {
 	return nil
 }
 
-func (r *Router) addAlias(alias, model string) error {
+func (r *Router) addAlias(alias, model ModelID) error {
 	if _, ok := r.modelCfg[model]; !ok {
 		return fmt.Errorf("alias %s points to unknown model %s", alias, model)
 	}
@@ -392,7 +412,8 @@ func (r *Router) addAlias(alias, model string) error {
 	return nil
 }
 
-func (r *Router) getClientAndModelByModelName(requested string) (IOllamaClient, string, error) {
+func (r *Router) getClientAndModelByModelName(modelName string) (IOllamaClient, ModelID, error) {
+	requested := ModelID(modelName)
 	log.WithField("requested_model", requested).Trace("Routing: request.")
 	modelID, ok := r.all2ModelID[requested]
 	if !ok {
@@ -417,15 +438,15 @@ func (r *Router) getClientAndModelByModelName(requested string) (IOllamaClient, 
 }
 
 type ConnectionConfig struct {
-	ConnectionID string
+	ConnectionID ConnectionID
 	Url          string
 }
 
-func reconcileConnectionsAndProxyConfigs(cc map[string]ConnectionConfig, pc map[string]ModelConfig) (map[string]ConnectionConfig, map[string]ModelConfig, error) {
-	cconf := map[string]ConnectionConfig{}
-	pconf := map[string]ModelConfig{}
+func reconcileConnectionsAndProxyConfigs(cc map[ConnectionID]ConnectionConfig, pc map[ModelID]ModelConfig) (map[ConnectionID]ConnectionConfig, map[ModelID]ModelConfig, error) {
+	cconf := map[ConnectionID]ConnectionConfig{}
+	pconf := map[ModelID]ModelConfig{}
 
-	urls2ids := map[string][]string{}
+	urls2ids := map[string][]ConnectionID{}
 	if cc == nil {
 		return nil, nil, errors.New("missing connections config")
 	}
@@ -463,32 +484,31 @@ func reconcileConnectionsAndProxyConfigs(cc map[string]ConnectionConfig, pc map[
 			}
 		} else {
 			// it should be a url
-			_, err := url.Parse(v.ConnectionID)
-			if err != nil {
-				return nil, nil, fmt.Errorf("invalid connection id or url: %s", v.ConnectionID)
-			}
+
 			// if the connection url is already known by another connection id
-			if cid, ok := urls2ids[v.ConnectionID]; ok {
+			if cid, ok := urls2ids[v.ConnectionID.String()]; ok {
 				pconf[k] = ModelConfig{
-					ConnectionID: cid[0],
+					ConnectionID: ConnectionID(cid[0]),
 				}
 			} else {
-				// we have a new connection
-				u, err := url.Parse(v.ConnectionID)
-				if err != nil || u.Scheme == "" {
-					return nil, nil, fmt.Errorf("invalid connection connection id: %s, could not convert to valid url", v.ConnectionID)
+				if u, err := url.Parse(v.ConnectionID.String()); err != nil {
+					return nil, nil, fmt.Errorf("invalid connection id: %s, could not convert to valid url: %w", v.ConnectionID, err)
+				} else if strings.ToLower(u.Scheme) != "http" && strings.ToLower(u.Scheme) != "https" {
+					return nil, nil, fmt.Errorf("invalid connection id: %s, invalid url scheme", v.ConnectionID)
 				}
+				url := v.ConnectionID.String()
+				// we have a new connection
 				cconf[v.ConnectionID] = ConnectionConfig{
 					ConnectionID: v.ConnectionID,
-					Url:          v.ConnectionID,
+					Url:          v.ConnectionID.String(),
 				}
 				pconf[k] = ModelConfig{
 					ConnectionID: v.ConnectionID,
 				}
-				urls2ids[v.ConnectionID] = append(urls2ids[v.ConnectionID], v.ConnectionID)
-				cconf[k] = ConnectionConfig{
+				urls2ids[url] = append(urls2ids[url], v.ConnectionID)
+				cconf[v.ConnectionID] = ConnectionConfig{
 					ConnectionID: v.ConnectionID,
-					Url:          v.ConnectionID,
+					Url:          url,
 				}
 			}
 		}
@@ -496,14 +516,14 @@ func reconcileConnectionsAndProxyConfigs(cc map[string]ConnectionConfig, pc map[
 	return cconf, pconf, nil
 }
 
-func initClients(cconf map[string]ConnectionConfig) (map[string]IOllamaClient, error) {
+func initClients(cconf map[ConnectionID]ConnectionConfig) (map[ConnectionID]IOllamaClient, error) {
 	if cconf == nil {
 		return nil, errors.New("missing proxy config")
 	}
 	if len(cconf) == 0 {
 		return nil, errors.New("empty proxy config map")
 	}
-	cmap := map[string]IOllamaClient{}
+	cmap := map[ConnectionID]IOllamaClient{}
 	for k, v := range cconf {
 		remote, err := url.Parse(v.Url)
 		if err != nil {
@@ -516,7 +536,7 @@ func initClients(cconf map[string]ConnectionConfig) (map[string]IOllamaClient, e
 	return cmap, nil
 }
 
-func initRouterAliasOpts(aliases map[string]string) []RouterOption {
+func initRouterAliasOpts(aliases map[ModelID]ModelID) []RouterOption {
 	return []RouterOption{&RouterOptions{
 		Aliases: aliases,
 	}}

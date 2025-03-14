@@ -20,15 +20,15 @@ import (
 
 func TestInitServiceFailOnMissingProxyConfig(t *testing.T) {
 	_, err := gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{gollamas.ConnectionID("conn1"): {Url: "http://localhost:8080"}},
 	})
 	assert.EqualError(t, err, "missing models config")
 }
 
 func TestInitServiceFailOnEmptyProxyConfig(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Models:      map[string]gollamas.ModelConfig{},
-		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{gollamas.ConnectionID("conn1"): {Url: "http://localhost:8080"}},
 	})
 	assert.EqualError(t, err, "empty models config")
 	assert.Nil(t, s)
@@ -36,7 +36,7 @@ func TestInitServiceFailOnEmptyProxyConfig(t *testing.T) {
 
 func TestInitServiceFailOnMissingConnectionsConfig(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Models: map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
+		Models: map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 	})
 	assert.EqualError(t, err, "missing connections config")
 	assert.Nil(t, s)
@@ -44,8 +44,8 @@ func TestInitServiceFailOnMissingConnectionsConfig(t *testing.T) {
 
 func TestInitServiceSucceedsOnEmptyConnectionsConfig(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
@@ -53,18 +53,18 @@ func TestInitServiceSucceedsOnEmptyConnectionsConfig(t *testing.T) {
 
 func TestInitServiceFailsOnUnmetConnectionIdConfig(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "unknown"}},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "unknown"}},
 	})
-	assert.EqualError(t, err, "invalid connection connection id: unknown, could not convert to valid url")
+	assert.EqualError(t, err, "invalid connection id: unknown, invalid url scheme")
 	assert.Nil(t, s)
 }
 
 func TestInitServiceFailOnFailedAliases(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
-		Aliases:     map[string]string{"alias1": "unknown_model"},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
+		Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "unknown_model"},
 	})
 	assert.EqualError(t, err, "alias alias1 points to unknown model unknown_model")
 	assert.Nil(t, s)
@@ -72,21 +72,21 @@ func TestInitServiceFailOnFailedAliases(t *testing.T) {
 
 func TestInitService(t *testing.T) {
 	s, err := gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{"http://localhost:8080": {Url: "http://localhost:8080"}},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{"http://localhost:8080": {Url: "http://localhost:8080"}},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "http://localhost:8080"}},
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	s, err = gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	s, err = gollamas.InitService(gollamas.GollamasConfig{
-		Connections: map[string]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
-		Models:      map[string]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
-		Aliases:     map[string]string{"alias1": "model1"},
+		Connections: map[gollamas.ConnectionID]gollamas.ConnectionConfig{"conn1": {Url: "http://localhost:8080"}},
+		Models:      map[gollamas.ModelID]gollamas.ModelConfig{"model1": {ConnectionID: "conn1"}},
+		Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
@@ -229,7 +229,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/tags",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases: map[string]string{"alias1": "model1"},
+				Aliases: map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 			},
 			expected: api.ListResponse{Models: []api.ListModelResponse{
 				{Model: "model2:4b", Name: "model2:4b", ModifiedAt: time.UnixMilli(1741600020000)},
@@ -255,7 +255,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/tags",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases:     map[string]string{"alias1": "model1"},
+				Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 				ListAliases: true,
 			},
 			expected: api.ListResponse{Models: []api.ListModelResponse{
@@ -283,7 +283,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/tags",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases:     map[string]string{"alias1": "model1"},
+				Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 				ListAliases: true,
 			},
 			expected: api.ListResponse{Models: []api.ListModelResponse{
@@ -334,7 +334,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/ps",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases: map[string]string{"alias1": "model1"},
+				Aliases: map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 			},
 			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
 				{Model: "model1", Name: "model1", ExpiresAt: time.UnixMilli(1741600010000)},
@@ -360,7 +360,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/ps",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases:     map[string]string{"alias1": "model1"},
+				Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 				ListAliases: true,
 			},
 			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
@@ -388,7 +388,7 @@ func TestRunGollamas(t *testing.T) {
 			url:          "/api/ps",
 			expectedcode: 200,
 			conf: gollamas.GollamasConfig{
-				Aliases:     map[string]string{"alias1": "model1"},
+				Aliases:     map[gollamas.ModelID]gollamas.ModelID{"alias1": "model1"},
 				ListAliases: true,
 			},
 			expected: api.ProcessResponse{Models: []api.ProcessModelResponse{
@@ -473,8 +473,8 @@ func createListener() (l net.Listener, close func()) {
 	}
 }
 
-func runWithinGinMocksBounds(ctx context.Context, svcs map[string]*mocks.IGinService, fn func(map[string]gollamas.ConnectionConfig)) {
-	cfg := map[string]gollamas.ConnectionConfig{}
+func runWithinGinMocksBounds(ctx context.Context, svcs map[gollamas.ConnectionID]*mocks.IGinService, fn func(map[gollamas.ConnectionID]gollamas.ConnectionConfig)) {
+	cfg := map[gollamas.ConnectionID]gollamas.ConnectionConfig{}
 	for id, svc := range svcs {
 		l, close := createListener()
 		defer close()
@@ -489,22 +489,22 @@ func runWithinGinMocksBounds(ctx context.Context, svcs map[string]*mocks.IGinSer
 
 func runAutoConfig(t *testing.T, ctx context.Context, cfg gollamas.GollamasConfig, fn func(context.Context, map[string]*mocks.IGinService, http.Handler)) {
 	mcs := map[string]*mocks.IGinService{}
-	tcs := map[string]*mocks.IGinService{}
+	tcs := map[gollamas.ConnectionID]*mocks.IGinService{}
 
 	if len(cfg.Models) == 0 {
-		cfg.Models = map[string]gollamas.ModelConfig{}
+		cfg.Models = map[gollamas.ModelID]gollamas.ModelConfig{}
 		for i, m := range []string{"model1", "model2:4b"} {
-			cfg.Models[m] = gollamas.ModelConfig{ConnectionID: fmt.Sprintf("c%d", i+1)}
+			cfg.Models[gollamas.ModelID(m)] = gollamas.ModelConfig{ConnectionID: gollamas.ConnectionID(fmt.Sprintf("c%d", i+1))}
 		}
 	}
 	for m, c := range cfg.Models {
 		if _, ok := tcs[c.ConnectionID]; !ok {
 			tcs[c.ConnectionID] = mocks.NewIGinService(t)
 		}
-		mcs[m] = tcs[c.ConnectionID]
+		mcs[m.String()] = tcs[c.ConnectionID]
 	}
 
-	runWithinGinMocksBounds(ctx, tcs, func(ccfg map[string]gollamas.ConnectionConfig) {
+	runWithinGinMocksBounds(ctx, tcs, func(ccfg map[gollamas.ConnectionID]gollamas.ConnectionConfig) {
 		c := gollamas.GollamasConfig{
 			Listen:      "localhost:0",
 			Connections: ccfg,

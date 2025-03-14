@@ -118,8 +118,8 @@ func initErrorLevel(e string) error {
 	return nil
 }
 
-func initConnectionsConfig(ss []string) (map[string]ConnectionConfig, error) {
-	res := map[string]ConnectionConfig{}
+func initConnectionsConfig(ss []string) (map[ConnectionID]ConnectionConfig, error) {
+	res := map[ConnectionID]ConnectionConfig{}
 	log.WithField("strings", ss).Trace("Initialize connection map.")
 	for _, s := range ss {
 		if s == "" {
@@ -135,16 +135,16 @@ func initConnectionsConfig(ss []string) (map[string]ConnectionConfig, error) {
 		if v[1] == "" {
 			return nil, fmt.Errorf("empty connection destination in %s", s)
 		}
-		res[v[0]] = ConnectionConfig{
-			ConnectionID: v[0],
+		res[ConnectionID(v[0])] = ConnectionConfig{
+			ConnectionID: ConnectionID(v[0]),
 			Url:          v[1],
 		}
 	}
 	return res, nil
 }
 
-func initProxyConfig(ss []string) (map[string]ModelConfig, error) {
-	res := map[string]ModelConfig{}
+func initProxyConfig(ss []string) (map[ModelID]ModelConfig, error) {
+	res := map[ModelID]ModelConfig{}
 	log.WithField("strings", ss).Trace("Initialize proxy configuration.")
 	for _, s := range ss {
 		if s == "" {
@@ -160,15 +160,15 @@ func initProxyConfig(ss []string) (map[string]ModelConfig, error) {
 		if v[1] == "" {
 			return nil, fmt.Errorf("empty proxy destination in %s", s)
 		}
-		res[v[0]] = ModelConfig{
-			ConnectionID: v[1],
+		res[ModelID(v[0])] = ModelConfig{
+			ConnectionID: ConnectionID(v[1]),
 		}
 	}
 	return res, nil
 }
 
-func initAliasesMap(ss []string) (map[string]string, error) {
-	aliases := map[string]string{}
+func initAliasesMap(ss []string) (map[ModelID]ModelID, error) {
+	aliases := map[ModelID]ModelID{}
 	log.WithField("aliases", aliases).Trace("Initialize aliases.")
 	for _, s := range ss {
 		if s == "" {
@@ -184,7 +184,7 @@ func initAliasesMap(ss []string) (map[string]string, error) {
 		if v[1] == "" {
 			return nil, fmt.Errorf("empty alias model in: %s", s)
 		}
-		aliases[v[0]] = v[1]
+		aliases[ModelID(v[0])] = ModelID(v[1])
 	}
 	return aliases, nil
 }
@@ -203,7 +203,7 @@ func runGollamasCli(ctx context.Context, cli *cli.Command) error {
 	return runGollamas(*cfg)
 }
 
-func getAliasesMap(cli *cli.Command) (map[string]string, error) {
+func getAliasesMap(cli *cli.Command) (map[ModelID]ModelID, error) {
 	p := append([]string{}, cli.StringSlice("alias")...)
 	if cli.String("aliases") != "" {
 		p = append(p, strings.Split(cli.String("aliases"), ",")...)
@@ -211,7 +211,7 @@ func getAliasesMap(cli *cli.Command) (map[string]string, error) {
 	return initAliasesMap(p)
 }
 
-func getConnectionsConfig(cli *cli.Command) (map[string]ConnectionConfig, error) {
+func getConnectionsConfig(cli *cli.Command) (map[ConnectionID]ConnectionConfig, error) {
 	p := append([]string{}, cli.StringSlice("connection")...)
 	if cli.String("connections") != "" {
 		p = append(p, strings.Split(cli.String("connections"), ",")...)
@@ -219,7 +219,7 @@ func getConnectionsConfig(cli *cli.Command) (map[string]ConnectionConfig, error)
 	return initConnectionsConfig(p)
 }
 
-func getProxyConfig(cli *cli.Command) (map[string]ModelConfig, error) {
+func getProxyConfig(cli *cli.Command) (map[ModelID]ModelConfig, error) {
 	p := append([]string{}, cli.StringSlice("proxy")...)
 	if cli.String("proxies") != "" {
 		p = append(p, strings.Split(cli.String("proxies"), ",")...)
@@ -251,9 +251,9 @@ func getGollamasConfig(cli *cli.Command) (*GollamasConfig, error) {
 
 type GollamasConfig struct {
 	Listen      string
-	Connections map[string]ConnectionConfig
-	Models      map[string]ModelConfig
-	Aliases     map[string]string
+	Connections map[ConnectionID]ConnectionConfig
+	Models      map[ModelID]ModelConfig
+	Aliases     map[ModelID]ModelID
 	ListAliases bool
 }
 

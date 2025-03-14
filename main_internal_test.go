@@ -46,9 +46,9 @@ func TestRunCliConfig(t *testing.T) {
 			args: []string{"gollamas"},
 			config: &GollamasConfig{
 				Listen:      "localhost:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{},
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
@@ -56,9 +56,9 @@ func TestRunCliConfig(t *testing.T) {
 			args: []string{"gollamas", "--listen", "0.0.0.0:11434"},
 			config: &GollamasConfig{
 				Listen:      "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{},
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
@@ -97,12 +97,12 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen:      "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models: map[string]ModelConfig{
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models: map[ModelID]ModelConfig{
 					"model1": {ConnectionID: "http://server1"},
 					"model2": {ConnectionID: "http://server2"},
 				},
-				Aliases:     map[string]string{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
@@ -113,12 +113,12 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen:      "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models: map[string]ModelConfig{
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models: map[ModelID]ModelConfig{
 					"model1": {ConnectionID: "http://server1"},
 					"model2": {ConnectionID: "http://server2"},
 				},
-				Aliases:     map[string]string{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
@@ -157,9 +157,9 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen:      "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{"alias1": "model1", "alias2": "model2"},
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{"alias1": "model1", "alias2": "model2"},
 				ListAliases: false,
 			},
 		},
@@ -170,9 +170,9 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen:      "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{"alias1": "model1", "alias2": "model2"},
+				Connections: map[ConnectionID]ConnectionConfig{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{"alias1": "model1", "alias2": "model2"},
 				ListAliases: false,
 			},
 		},
@@ -211,12 +211,12 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen: "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{
+				Connections: map[ConnectionID]ConnectionConfig{
 					"c1": {Url: "http://server1", ConnectionID: "c1"},
 					"c2": {Url: "http://server2", ConnectionID: "c2"},
 				},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
@@ -227,12 +227,12 @@ func TestRunCliConfig(t *testing.T) {
 			},
 			config: &GollamasConfig{
 				Listen: "0.0.0.0:11434",
-				Connections: map[string]ConnectionConfig{
+				Connections: map[ConnectionID]ConnectionConfig{
 					"c1": {Url: "http://server1", ConnectionID: "c1"},
 					"c2": {Url: "http://server2", ConnectionID: "c2"},
 				},
-				Models:      map[string]ModelConfig{},
-				Aliases:     map[string]string{},
+				Models:      map[ModelID]ModelConfig{},
+				Aliases:     map[ModelID]ModelID{},
 				ListAliases: false,
 			},
 		},
