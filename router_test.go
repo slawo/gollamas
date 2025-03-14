@@ -104,6 +104,20 @@ func TestNewRouterFailOnInvalidAlias(t *testing.T) {
 	c1.AssertExpectations(t)
 }
 
+func TestNewRouterFailOnOptionError(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	r, err := gollamas.NewRouter(
+		map[gollamas.ConnectionID]gollamas.IOllamaClient{
+			"c1": c1,
+		},
+		map[gollamas.ModelID]gollamas.ModelConfig{"llama3.2": {ConnectionID: "c1"}},
+		gollamas.RouterOptionFunc(func(opts *gollamas.RouterOptions) error { return errors.New("SOME_ERROR") }),
+	)
+	assert.EqualError(t, err, "failed to apply options: SOME_ERROR")
+	assert.Nil(t, r)
+	c1.AssertExpectations(t)
+}
+
 func TestNewRouter(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	r, err := gollamas.NewRouter(

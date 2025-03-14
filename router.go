@@ -77,7 +77,7 @@ func NewRouter(cmap map[ConnectionID]IOllamaClient, mconf map[ModelID]ModelConfi
 	opt := RouterOptions{ExposeAliases: true}
 	for _, o := range opts {
 		if err := o.ApplyTo(&opt); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to apply options: %w", err)
 		}
 	}
 	r := &Router{
