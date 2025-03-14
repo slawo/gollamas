@@ -65,6 +65,18 @@ func TestNewRouterFailsOnModelLeadingSpace(t *testing.T) {
 	assert.Nil(t, r)
 }
 
+func TestNewRouterFailsOnUnknownConnectionID(t *testing.T) {
+	c1 := mocks.NewIOllamaClient(t)
+	r, err := gollamas.NewRouter(
+		map[gollamas.ConnectionID]gollamas.IOllamaClient{
+			"c1": c1,
+		},
+		map[gollamas.ModelID]gollamas.ModelConfig{"llama3.2": {ConnectionID: "unknown"}},
+	)
+	assert.EqualError(t, err, "unknown connection id for model llama3.2")
+	assert.Nil(t, r)
+}
+
 func TestNewRouterFailsOnNilClient(t *testing.T) {
 	c1 := mocks.NewIOllamaClient(t)
 	r, err := gollamas.NewRouter(
