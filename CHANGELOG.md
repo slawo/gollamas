@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.5](https://github.com/slawo/gollamas/compare/v0.4.4...v0.4.5) (2025-05-07)
+
+
+### Bug Fixes
+
+* bump dependencies for CVE-2025-22871 ([8cba2eb](https://github.com/slawo/gollamas/commit/8cba2eb9e0fabbc60b1e7395c45eb501f7145497))
+* pin go version for tests and release to 1.24.2 for CVE-2025-22871 ([fb64d4e](https://github.com/slawo/gollamas/commit/fb64d4e35ec040379d01027d31f40c7f69de5792))
+
 ## [0.4.4](https://github.com/slawo/gollamas/compare/v0.4.3...v0.4.4) (2025-03-13)
 
 
