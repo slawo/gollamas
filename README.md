@@ -53,6 +53,67 @@ go run ./*.go --level=trace \
     --proxy=deepseek-r1:14b=http://server-01:11434
 ````
 
+## kubernetes
+
+Example of a kube deployment.
+
+```
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gollamas
+  namespace: ai
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      name: gollamas
+  template:
+    metadata:
+      labels:
+        name: gollamas
+    spec:
+      containers:
+        - name: gollamas
+          image: slawoc/gollamas:latest
+          ports:
+            - name: http
+              containerPort: 11434
+              protocol: TCP
+          env:
+            - name: GOLLAMAS_LISTEN
+              value: 0.0.0.0:11434
+            - name: GOLLAMAS_PROXIES
+              value: qwen2.5-coder:14b=http://ollama.ai.svc.cluster.local,gemma3:12b=http://f-01-ai.example.com:11434,llama3.2-vision=http://f-02-ai.example.com:11434
+            - name: GOLLAMAS_ALIASES
+              value: ""
+            - name: GOLLAMAS_LIST_ALIASES
+              value: "true"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gollamas
+  namespace: ai
+spec:
+  type: LoadBalancer
+  selector:
+    name: gollamas
+  ports:
+    - port: 80
+      name: http
+      targetPort: http
+      protocol: TCP
+```
+
 # Usage
 
 ## parameters
