@@ -28,7 +28,7 @@ on:
         required: false
         type: string
       cosign-release:
-        description: "The go version to use"
+        description: "The version of cosign to use"
         default: "v2.4.3"
         required: false
         type: string
