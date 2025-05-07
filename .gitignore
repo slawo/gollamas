@@ -12,6 +12,7 @@ tests.env
 # build and debug artefacts
 /dist
 /.bin
+/bin
 __debug_*
 coverage*
 
