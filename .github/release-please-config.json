@@ -1,0 +1,71 @@
+{
+  "release-type": "go",
+  "initial-version": "0.0.1",
+  "pull-request-title-pattern": "chore: release v${version}",
+  "changelog-sections": [
+    {
+      "type": "build",
+      "section": "🛠️ Build",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "🧹 Chores",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "🚦 CI",
+      "hidden": false
+    },
+    {
+      "type": "deps",
+      "section": "📦 Dependencies"
+    },
+    {
+      "type": "docs",
+      "section": "📚 Documentation",
+      "hidden": false
+    },
+    {
+      "type": "feat",
+      "section": "✨ New Features",
+      "hidden": false
+    },
+    {
+      "type": "feature",
+      "section": "✨ New Features"
+    },
+    {
+      "type": "fix",
+      "section": "🐛 Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "🚀 Performance Improvements"
+    },
+    {
+      "type": "refactor",
+      "section": "🔄 Code Refactoring",
+      "hidden": false
+    },
+    {
+      "type": "revert",
+      "section": "🔙 Reverts"
+    },
+    {
+      "type": "style",
+      "section": "🎨 Styling",
+      "hidden": false
+    },
+    {
+      "type": "test",
+      "hidden": true,
+      "section": "🧪 Tests"
+    }
+  ],
+  "packages": {
+    ".": {}
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}
