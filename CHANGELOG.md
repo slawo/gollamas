@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.6](https://github.com/slawo/gollamas/compare/v0.4.5...v0.4.6) (2025-07-23)
+
+
+### 🚦 CI
+
+* update release-please config ([3eca407](https://github.com/slawo/gollamas/commit/3eca407d97c469751bf41dec004153f571b29318))
+
+
+### 📦 Dependencies
+
+* update go version to 1.24.5 ([80e1507](https://github.com/slawo/gollamas/commit/80e1507a90660c8de6d47e54904ab077cc596e72))
+
 ## [0.4.5](https://github.com/slawo/gollamas/compare/v0.4.4...v0.4.5) (2025-05-07)
 
 
