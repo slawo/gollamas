@@ -1,6 +1,6 @@
 module github.com/slawo/gollamas
 
-go 1.24.2
+go 1.24.5
 
 require (
 	github.com/gin-contrib/cors v1.7.5
